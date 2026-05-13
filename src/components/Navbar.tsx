@@ -54,15 +54,14 @@ export default function Navbar() {
 
         {/* Auth buttons */}
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <button
+          <Link
+            href="/login"
             id="btn-login"
             className="btn-outline"
             style={{ padding: "9px 22px", fontSize: "0.875rem" }}
-            disabled
-            title="Próximamente"
           >
             Iniciar sesión
-          </button>
+          </Link>
           <Link
             href="/registro"
             id="btn-registro-nav"

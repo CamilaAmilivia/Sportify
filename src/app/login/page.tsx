@@ -1,14 +1,14 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import FormularioRegistro from "./FormularioRegistro";
+import FormularioLogin from "./FormularioLogin";
 
 export const metadata = {
-  title: "Registro — Sportify",
-  description: "Creá tu cuenta en Sportify y empezá a entrenar con nosotros.",
+  title: "Iniciar sesión — Sportify",
+  description: "Ingresá a tu cuenta de Sportify para gestionar tus entrenamientos y actividades.",
 };
 
-export default function PaginaRegistro() {
+export default function PaginaLogin() {
   return (
     <>
       <Navbar />
@@ -25,7 +25,7 @@ export default function PaginaRegistro() {
         <div
           style={{
             width: "100%",
-            maxWidth: 560,
+            maxWidth: 480,
           }}
         >
           {/* Card */}
@@ -40,7 +40,6 @@ export default function PaginaRegistro() {
           >
             {/* Header */}
             <div style={{ marginBottom: 32 }}>
-
               <h1
                 style={{
                   fontSize: "1.6rem",
@@ -49,14 +48,14 @@ export default function PaginaRegistro() {
                   marginBottom: 6,
                 }}
               >
-                Crear cuenta
+                Iniciar sesión
               </h1>
               <p style={{ fontSize: "0.9rem", color: "var(--color-gray)" }}>
-                Completá tus datos para empezar a entrenar con nosotros.
+                Ingresá tus credenciales para acceder a tu cuenta.
               </p>
             </div>
 
-            <FormularioRegistro />
+            <FormularioLogin />
 
             {/* Footer del card */}
             <p
@@ -67,16 +66,16 @@ export default function PaginaRegistro() {
                 marginTop: 24,
               }}
             >
-              ¿Ya tenés cuenta?{" "}
+              ¿No tenés cuenta?{" "}
               <Link
-                href="/login"
+                href="/registro"
                 style={{
                   color: "var(--color-green)",
                   fontWeight: 600,
                   textDecoration: "none",
                 }}
               >
-                Iniciar sesión
+                Registrate acá
               </Link>
             </p>
           </div>
