@@ -43,7 +43,7 @@ export default function Navbar() {
         <div
           style={{
             display: "flex",
-            gap: 32,
+            gap: "clamp(12px, 3vw, 32px)",
             alignItems: "center",
           }}
         >
@@ -53,12 +53,16 @@ export default function Navbar() {
         </div>
 
         {/* Auth buttons */}
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "clamp(6px, 1.5vw, 12px)", alignItems: "center" }}>
           <Link
             href="/login"
             id="btn-login"
             className="btn-outline"
-            style={{ padding: "9px 22px", fontSize: "0.875rem" }}
+            style={{
+              padding: "clamp(6px, 1.5vw, 9px) clamp(10px, 2.5vw, 22px)",
+              fontSize: "clamp(0.65rem, 2.2vw, 0.875rem)",
+              whiteSpace: "nowrap",
+            }}
           >
             Iniciar sesión
           </Link>
@@ -66,7 +70,11 @@ export default function Navbar() {
             href="/registro"
             id="btn-registro-nav"
             className="btn-primary"
-            style={{ padding: "9px 22px", fontSize: "0.875rem" }}
+            style={{
+              padding: "clamp(6px, 1.5vw, 9px) clamp(10px, 2.5vw, 22px)",
+              fontSize: "clamp(0.65rem, 2.2vw, 0.875rem)",
+              whiteSpace: "nowrap",
+            }}
           >
             Registrarse
           </Link>

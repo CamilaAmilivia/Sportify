@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { registrarCliente, RegistroState } from "./actions";
 
@@ -11,6 +11,7 @@ export default function FormularioRegistro() {
     registrarCliente,
     estadoInicial
   );
+  const [nombreArchivo, setNombreArchivo] = useState<string | null>(null);
 
   if (state.exito) {
     return (
@@ -146,6 +147,7 @@ export default function FormularioRegistro() {
           id="fechaNac"
           name="fechaNac"
           type="date"
+          lang="es-AR"
           className="form-input"
           required
         />
@@ -156,18 +158,68 @@ export default function FormularioRegistro() {
 
       {/* Apto físico */}
       <div className="form-field">
-        <label htmlFor="aptoFisico" className="form-label">
+        <label className="form-label">
           Certificado de aptitud física
         </label>
         <p style={{ fontSize: "0.8rem", color: "var(--color-gray)", marginBottom: 4 }}>
           Adjuntá el certificado emitido por tu médico (PDF, JPG, PNG).
         </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 2 }}>
+          <label
+            htmlFor="aptoFisico"
+            style={{
+              padding: "9px 16px",
+              background: "var(--color-gray-light)",
+              border: "1.5px solid #D1D5DB",
+              borderRadius: "var(--radius-sm)",
+              cursor: "pointer",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              color: "var(--color-dark)",
+              transition: "all var(--transition)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = "var(--color-green)";
+              e.currentTarget.style.background = "var(--color-white)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = "#D1D5DB";
+              e.currentTarget.style.background = "var(--color-gray-light)";
+            }}
+          >
+            📁 Seleccionar archivo
+          </label>
+          <span
+            style={{
+              fontSize: "0.9rem",
+              color: nombreArchivo ? "var(--color-dark)" : "var(--color-gray)",
+              fontWeight: nombreArchivo ? 500 : 400,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              maxWidth: "220px",
+            }}
+            title={nombreArchivo || "Ningún archivo seleccionado"}
+          >
+            {nombreArchivo ? nombreArchivo : "Ningún archivo seleccionado"}
+          </span>
+        </div>
         <input
           id="aptoFisico"
           name="aptoFisico"
           type="file"
           accept=".pdf,.jpg,.jpeg,.png"
-          className="form-input"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            if (e.target.files && e.target.files[0]) {
+              setNombreArchivo(e.target.files[0].name);
+            } else {
+              setNombreArchivo(null);
+            }
+          }}
         />
         {state.errores?.aptoFisico && (
           <span className="form-error">⚠ {state.errores.aptoFisico[0]}</span>
