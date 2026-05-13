@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import FormularioLogin from "./FormularioLogin";
@@ -8,7 +10,12 @@ export const metadata = {
   description: "Ingresá a tu cuenta de Sportify para gestionar tus entrenamientos y actividades.",
 };
 
-export default function PaginaLogin() {
+export default async function PaginaLogin() {
+  const cookieStore = await cookies();
+  if (cookieStore.has("sportify_session")) {
+    redirect("/plataforma");
+  }
+
   return (
     <>
       <Navbar />
