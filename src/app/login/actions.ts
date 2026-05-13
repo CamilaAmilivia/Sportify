@@ -1,6 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 export type LoginState = {
   errores?: {
@@ -32,6 +34,8 @@ export async function iniciarSesion(
     return { errores };
   }
 
+  let redirectUrl: string | null = null;
+
   try {
     // Buscar el cliente por email
     const cliente = await prisma.cliente.findUnique({
@@ -55,11 +59,16 @@ export async function iniciarSesion(
       };
     }
 
-    // Éxito: según los requerimientos, todavía no hace nada (ej. setear cookies/sesión)
-    return {
-      exito: true,
-      mensaje: "¡Sesión iniciada correctamente!",
-    };
+    // Crear cookie de sesión
+    const cookieStore = await cookies();
+    cookieStore.set("sportify_session", cliente.email, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7, // 7 días
+    });
+
+    redirectUrl = "/plataforma";
   } catch (error) {
     console.error("Error al iniciar sesión:", error);
     return {
@@ -68,4 +77,10 @@ export async function iniciarSesion(
       },
     };
   }
+
+  if (redirectUrl) {
+    redirect(redirectUrl);
+  }
+
+  return {};
 }
