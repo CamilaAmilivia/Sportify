@@ -18,15 +18,25 @@ export default function Footer() {
           gap: 12,
         }}
       >
-        <span
+        <div
           style={{
-            fontSize: "1.1rem",
-            fontWeight: 800,
-            color: "var(--color-white)",
+            background: "var(--color-white)",
+            padding: "6px 12px",
+            borderRadius: "var(--radius-sm)",
+            display: "flex",
+            alignItems: "center",
           }}
         >
-          Sport<span style={{ color: "var(--color-green)" }}>ify</span>
-        </span>
+          <img
+            src="/logo.svg"
+            alt="Sportify Logo"
+            style={{
+              height: 28,
+              width: "auto",
+              objectFit: "contain",
+            }}
+          />
+        </div>
         <p
           style={{
             fontSize: "0.8rem",

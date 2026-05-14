@@ -37,17 +37,26 @@ export default function NavbarPlataforma({ usuario }: { usuario: Usuario }) {
           }}
         >
           {/* Logo */}
-          <Link href="/plataforma" style={{ textDecoration: "none" }}>
-            <span
+          <Link
+            href="/plataforma"
+            style={{
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              transition: "transform var(--transition)",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.03)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+          >
+            <img
+              src="/logo.svg"
+              alt="Sportify Logo"
               style={{
-                fontSize: "1.5rem",
-                fontWeight: 800,
-                letterSpacing: "-0.5px",
-                color: "var(--color-dark)",
+                height: 44,
+                width: "auto",
+                objectFit: "contain",
               }}
-            >
-              Sport<span style={{ color: "var(--color-green)" }}>ify</span>
-            </span>
+            />
           </Link>
 
           {/* Botón Cuenta a la derecha */}
