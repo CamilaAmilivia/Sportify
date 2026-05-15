@@ -71,13 +71,20 @@ export async function registrarCliente(
     return { errores };
   }
 
-  // Verificar unicidad de DNI y email en la BD
-  const [dniExistente, emailExistente] = await Promise.all([
-    prisma.cliente.findUnique({ where: { dni } }),
-    prisma.cliente.findUnique({ where: { email } }),
-  ]);
+  const dniNumero = Number(dni);
 
-  if (dniExistente) errores.dni = ["Este DNI ya está registrado."];
+  // Verificar unicidad de DNI y email en la BD
+  const [cantidadDni, emailExistente] = await Promise.all([
+    prisma.usuario.count({
+    where: {
+      dni: dniNumero,
+    },
+  }),
+    prisma.usuario.findUnique({ where: { email } }),
+  ]);
+if (cantidadDni > 0) {
+  errores.dni = ["Ya existe un usuario registrado con ese DNI."];
+}
   if (emailExistente) errores.email = ["Este email ya está registrado."];
 
   if (Object.keys(errores).length > 0) {
@@ -96,15 +103,17 @@ export async function registrarCliente(
 
   // Crear cliente en la BD
   const fechaNac = new Date(fechaNacStr);
-  await prisma.cliente.create({
+  await prisma.usuario.create({
     data: {
-      dni,
+      dni: dniNumero,
       nombre,
       apellido,
       email,
       password, // En producción debería hashearse (ej. con bcrypt)
       fechaNac,
       aptoFisico: `/uploads/${nombreArchivo}`,
+      rol: "CLIENTE",
+      activo: true,
     },
   });
 

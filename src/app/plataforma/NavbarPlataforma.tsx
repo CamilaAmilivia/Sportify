@@ -2,41 +2,48 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cerrarSesion } from "./actions";
+import type { UsuarioSesion } from "@/tipos/usuario";
+import { navegacionPorRol, nombreRol, } from "@/configuracion/navegacion";
 
-type Usuario = {
-  nombre: string;
-  apellido: string;
-  email: string;
-};
+export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}) {
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const pathname = usePathname();
 
-export default function NavbarPlataforma({ usuario }: { usuario: Usuario }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const itemsNavegacion = navegacionPorRol[usuario.rol];
 
   return (
-    <>
-      <header
+    <header
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+        background: "rgba(255,255,255,0.95)",
+        backdropFilter: "blur(12px)",
+        borderBottom: "1px solid rgba(0,0,0,0.06)",
+      }}
+    >
+      <nav
         style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 50,
-          background: "rgba(255,255,255,0.95)",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(0,0,0,0.06)",
+          maxWidth: 1400,
+          margin: "0 auto",
+          padding: "0 28px",
+          height: 74,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 24,
         }}
       >
-        <nav
+        <div
           style={{
-            maxWidth: 1200,
-            margin: "0 auto",
-            padding: "0 24px",
-            height: 68,
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            gap: 32,
           }}
         >
-          {/* Logo */}
+          {/* Logo: no tocar */}
           <Link
             href="/plataforma"
             style={{
@@ -45,8 +52,12 @@ export default function NavbarPlataforma({ usuario }: { usuario: Usuario }) {
               alignItems: "center",
               transition: "transform var(--transition)",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.03)")}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.transform = "scale(1.03)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.transform = "scale(1)")
+            }
           >
             <img
               src="/logo.svg"
@@ -59,114 +70,220 @@ export default function NavbarPlataforma({ usuario }: { usuario: Usuario }) {
             />
           </Link>
 
-          {/* Botón Cuenta a la derecha */}
-          <div>
-            <button
-              onClick={() => setIsOpen(true)}
-              className="btn-outline"
-              style={{ padding: "8px 20px", fontSize: "0.875rem" }}
-            >
-              Cuenta
-            </button>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            {itemsNavegacion.map((item) => {
+              const activo = pathname === item.href;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "18px 22px",
+                    borderRadius: 12,
+                    textDecoration: "none",
+                    fontWeight: 600,
+                    fontSize: "0.95rem",
+                    color: activo ? "white" : "var(--color-dark)",
+                    background: activo ? "#22c55e" : "transparent",
+                    transition: "background var(--transition)",
+                  }}
+                >
+                  <span>{item.icono}</span>
+                  {item.nombre}
+                </Link>
+              );
+            })}
           </div>
-        </nav>
-      </header>
+        </div>
 
-      {/* Drawer Overlay */}
-      {isOpen && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.4)",
-            backdropFilter: "blur(4px)",
-            zIndex: 100,
-            transition: "opacity var(--transition)",
-          }}
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Drawer Panel */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          right: isOpen ? 0 : "-400px",
-          width: "100%",
-          maxWidth: 360,
-          height: "100vh",
-          background: "var(--color-white)",
-          boxShadow: "var(--shadow-card)",
-          zIndex: 101,
-          transition: "right var(--transition)",
-          padding: "32px 24px",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {/* Header del Panel */}
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: 32,
+            gap: 20,
+            position: "relative",
           }}
         >
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 800 }}>Mi cuenta</h2>
           <button
-            onClick={() => setIsOpen(false)}
+            type="button"
+            aria-label="Notificaciones"
             style={{
+              position: "relative",
               background: "none",
               border: "none",
-              fontSize: "1.5rem",
+              fontSize: "1.4rem",
               cursor: "pointer",
-              color: "var(--color-gray)",
             }}
           >
-            ✕
+            🔔
+            <span
+              style={{
+                position: "absolute",
+                top: 0,
+                right: 0,
+                width: 9,
+                height: 9,
+                borderRadius: "50%",
+                background: "#22c55e",
+              }}
+            />
           </button>
-        </div>
 
-        {/* Datos del usuario */}
-        <div
-          style={{
-            marginBottom: 32,
-            padding: "8px 0",
-            textAlign: "center",
-          }}
-        >
-          <p
-            style={{
-              fontSize: "1.05rem",
-              fontWeight: 700,
-              color: "var(--color-dark)",
-            }}
-          >
-            {usuario.nombre} {usuario.apellido}
-          </p>
-          <p style={{ fontSize: "0.85rem", color: "var(--color-gray)" }}>
-            {usuario.email}
-          </p>
-        </div>
-
-        {/* Acciones */}
-        <div style={{ marginTop: "auto" }}>
           <button
-            onClick={async () => {
-              await cerrarSesion();
+            type="button"
+            onClick={() => setMenuAbierto((valor) => !valor)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "10px 18px",
+              borderRadius: 14,
+              border: "1px solid rgba(0,0,0,0.08)",
+              background: "white",
+              fontSize: "1rem",
+              fontWeight: 700,
+              cursor: "pointer",
             }}
-            className="btn-outline-danger"
-            style={{ width: "100%" }}
           >
-            Cerrar sesión
+            <span
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                background: "#22c55e",
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              👤
+            </span>
+            Mi Cuenta
+            <span>⌄</span>
           </button>
+
+          {menuAbierto && (
+            <div
+              style={{
+                position: "absolute",
+                top: 62,
+                right: 0,
+                width: 280,
+                background: "white",
+                borderRadius: 14,
+                border: "1px solid rgba(0,0,0,0.08)",
+                boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
+                overflow: "hidden",
+                zIndex: 100,
+              }}
+            >
+              <div
+                style={{
+                  padding: "18px 20px 14px",
+                  borderBottom: "1px solid rgba(0,0,0,0.08)",
+                }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontWeight: 800,
+                    color: "var(--color-dark)",
+                  }}
+                >
+                  {nombreRol[usuario.rol]}
+                </p>
+
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: "0.875rem",
+                    color: "var(--color-gray)",
+                  }}
+                >
+                  {usuario.email}
+                </p>
+              </div>
+
+              <div style={{ padding: "8px 0" }}>
+                {usuario.rol === "CLIENTE" && (
+                  <>
+                    <Link
+                      href="/plataforma/perfil"
+                      style={linkMenuCuenta}
+                      onClick={() => setMenuAbierto(false)}
+                    >
+                      👤 Ver Perfil
+                    </Link>
+                  </>
+                )}
+
+                <Link
+                  href="/plataforma/configuracion"
+                  style={linkMenuCuenta}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  ⚙️ Configuración
+                </Link>
+
+                <Link
+                  href="/plataforma/ayuda"
+                  style={linkMenuCuenta}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  ❔ Ayuda
+                </Link>
+              </div>
+
+              <div
+                style={{
+                  borderTop: "1px solid rgba(0,0,0,0.08)",
+                  padding: "8px 0",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await cerrarSesion();
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "14px 20px",
+                    background: "white",
+                    border: "none",
+                    color: "#ef4444",
+                    fontWeight: 700,
+                    textAlign: "left",
+                    cursor: "pointer",
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  ↪ Cerrar Sesión
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
-    </>
+      </nav>
+    </header>
   );
 }
+
+const linkMenuCuenta = {
+  display: "block",
+  padding: "14px 20px",
+  textDecoration: "none",
+  color: "var(--color-dark)",
+  fontWeight: 600,
+  fontSize: "0.95rem",
+};

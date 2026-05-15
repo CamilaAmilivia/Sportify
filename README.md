@@ -52,3 +52,56 @@ Visualización de la base de datos con Prisma Studio:
 ```bash
 npx prisma studio
 ```
+Cargar los seeds de la base de datos
+
+npx prisma db seed
+
+
+
+--------------------------------------------------------------------------------------------------------
+**3. Roles, formas para hacer q compoenentes/paginas q creemos vean el ROL**
+
+para Admin
+import { requerirRol } from "@/lib/sesion";
+
+export default async function PaginaUsuarios() {
+  const usuario = await requerirRol(["ADMIN"]);
+
+  return (
+    <main>
+      <h1>Gestión de Usuarios</h1>
+      <p>Usuario logueado: {usuario.email}</p>
+    </main>
+  );
+}
+
+Con eso, si entra un cliente, lo manda a: /Plataforma
+
+
+Para Cliente
+import { requerirRol } from "@/lib/sesion";
+
+export default async function PaginaMisClases() {
+  const usuario = await requerirRol(["CLIENTE"]);
+
+  return (
+    <main>
+      <h1>Mis Clases</h1>
+      <p>Cliente: {usuario.nombre}</p>
+    </main>
+  );
+}
+
+Para AMBOS
+import { requerirRol } from "@/lib/sesion";
+
+export default async function PaginaAsistencia() {
+  const usuario = await requerirRol(["ADMIN", "PROFESOR"]);
+
+  return (
+    <main>
+      <h1>Asistencia</h1>
+      <p>Rol actual: {usuario.rol}</p>
+    </main>
+  );
+}
