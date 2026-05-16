@@ -38,7 +38,7 @@ export async function iniciarSesion(
 
   try {
     // Buscar el cliente por email
-    const cliente = await prisma.cliente.findUnique({
+    const cliente = await prisma.usuario.findUnique({
       where: { email },
     });
 

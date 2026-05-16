@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -12,13 +7,160 @@ datasource db {
   provider = "sqlite"
 }
 
-model Cliente {
-  dni        String   @id
+enum Rol {
+  CLIENTE
+  PROFESOR
+  ADMIN
+}
+
+enum EstadoClase {
+  ACTIVA
+  CANCELADA
+  FINALIZADA
+}
+
+enum EstadoInscripcion {
+  ACTIVA
+  CANCELADA
+}
+
+enum EstadoPago {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+  CANCELADO
+}
+
+enum TipoPago {
+  MENSUALIDAD
+  CLASE_INDIVIDUAL
+}
+
+model Usuario {
+  id         Int       @id @default(autoincrement())
+  dni        Int       @unique
   nombre     String
   apellido   String
-  email      String   @unique
+  email      String    @unique
   password   String
-  fechaNac   DateTime
-  aptoFisico String // Ruta al archivo
-  createdAt  DateTime @default(now())
+  fechaNac   DateTime?
+  aptoFisico String?
+  rol        Rol
+  activo     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  clasesProfesor Clase[]       @relation("ProfesorClase")
+  inscripciones  Inscripcion[]
+  listaEspera    ListaEspera[]
+  asistencias    Asistencia[]
+  pagos          Pago[]
 }
+
+model Disciplina {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique
+  descripcion String?
+  activa      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  clases Clase[]
+}
+
+model Clase {
+  id          Int         @id @default(autoincrement())
+  titulo      String
+  descripcion String?
+  fechaHora   DateTime
+  duracionMin Int
+  cupoMaximo  Int
+  precio      Float      @default(0)
+  estado      EstadoClase @default(ACTIVA)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  disciplinaId Int
+  disciplina   Disciplina @relation(fields: [disciplinaId], references: [id])
+
+  profesorId Int
+  profesor   Usuario @relation("ProfesorClase", fields: [profesorId], references: [id])
+
+  inscripciones Inscripcion[]
+  listaEspera   ListaEspera[]
+  asistencias   Asistencia[]
+  pagos         Pago[]
+}
+
+model Inscripcion {
+  id        Int               @id @default(autoincrement())
+  estado    EstadoInscripcion @default(ACTIVA)
+  createdAt DateTime          @default(now())
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  claseId Int
+  clase   Clase @relation(fields: [claseId], references: [id])
+
+  pagoId Int?
+  pago   Pago? @relation(fields: [pagoId], references: [id])
+
+  @@unique([usuarioId, claseId])
+}
+
+model ListaEspera {
+  id        Int      @id @default(autoincrement())
+  posicion  Int
+  createdAt DateTime @default(now())
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  claseId Int
+  clase   Clase @relation(fields: [claseId], references: [id])
+
+  @@unique([usuarioId, claseId])
+}
+
+model Asistencia {
+  id        Int      @id @default(autoincrement())
+  presente  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  claseId Int
+  clase   Clase @relation(fields: [claseId], references: [id])
+
+  @@unique([usuarioId, claseId])
+}
+
+model Pago {
+  id        Int        @id @default(autoincrement())
+  monto     Float
+  estado    EstadoPago @default(PENDIENTE)
+  tipo      TipoPago
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  externalReference        String? @unique
+  mercadoPagoPreferenceId  String? @unique
+  mercadoPagoPaymentId     String? @unique
+  initPoint                String?
+  reservaHasta             DateTime?
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  claseId Int?
+  clase   Clase? @relation(fields: [claseId], references: [id])
+
+  inscripciones Inscripcion[]
+
+  @@index([usuarioId])
+  @@index([claseId])
+  @@index([estado])
+}
+
+
