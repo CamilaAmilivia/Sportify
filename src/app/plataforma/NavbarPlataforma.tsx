@@ -216,17 +216,13 @@ export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}
               </div>
 
               <div style={{ padding: "8px 0" }}>
-                {usuario.rol === "CLIENTE" && (
-                  <>
-                    <Link
-                      href="/plataforma/perfil"
-                      style={linkMenuCuenta}
-                      onClick={() => setMenuAbierto(false)}
-                    >
-                      👤 Ver Perfil
-                    </Link>
-                  </>
-                )}
+                <Link
+                  href="/plataforma/perfil"
+                  style={linkMenuCuenta}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  👤 Ver Perfil
+                </Link>
 
                 <Link
                   href="/plataforma/configuracion"
