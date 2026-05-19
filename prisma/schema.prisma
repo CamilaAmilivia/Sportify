@@ -28,6 +28,7 @@ enum EstadoPago {
   PENDIENTE
   APROBADO
   RECHAZADO
+  CANCELADO
 }
 
 enum TipoPago {
@@ -73,6 +74,7 @@ model Clase {
   fechaHora   DateTime
   duracionMin Int
   cupoMaximo  Int
+  precio      Float      @default(0)
   estado      EstadoClase @default(ACTIVA)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -86,6 +88,7 @@ model Clase {
   inscripciones Inscripcion[]
   listaEspera   ListaEspera[]
   asistencias   Asistencia[]
+  pagos         Pago[]
 }
 
 model Inscripcion {
@@ -139,9 +142,25 @@ model Pago {
   estado    EstadoPago @default(PENDIENTE)
   tipo      TipoPago
   createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  externalReference        String? @unique
+  mercadoPagoPreferenceId  String? @unique
+  mercadoPagoPaymentId     String? @unique
+  initPoint                String?
+  reservaHasta             DateTime?
 
   usuarioId Int
   usuario   Usuario @relation(fields: [usuarioId], references: [id])
 
+  claseId Int?
+  clase   Clase? @relation(fields: [claseId], references: [id])
+
   inscripciones Inscripcion[]
+
+  @@index([usuarioId])
+  @@index([claseId])
+  @@index([estado])
 }
+
+
