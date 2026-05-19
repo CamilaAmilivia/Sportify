@@ -1,14 +1,24 @@
 import { NextResponse } from "next/server";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { prisma } from "@/lib/prisma";
-
-const client = new MercadoPagoConfig({
-  accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
-});
+import {
+  normalizarTipoPago,
+  PRECIO_ABONO_MENSUAL,
+  TIPOS_PAGO,
+} from "@/lib/pagos";
 
 export async function POST(request: Request) {
   try {
-    const { claseId, usuarioId } = await request.json();
+    const body = await request.json();
+
+    const claseId = Number(body.claseId);
+    const usuarioId = Number(body.usuarioId);
+    const tipoPago = normalizarTipoPago(body.tipoPago);
+
+    const montoPenalizacion =
+      tipoPago === TIPOS_PAGO.MENSUALIDAD
+        ? Math.max(0, Number(body.montoPenalizacion ?? 0))
+        : 0;
 
     if (!claseId || !usuarioId) {
       return NextResponse.json(
@@ -24,8 +34,17 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+      return NextResponse.json(
+        { error: "Falta configurar MERCADO_PAGO_ACCESS_TOKEN" },
+        { status: 500 }
+      );
+    }
+
     const clase = await prisma.clase.findUnique({
-      where: { id: Number(claseId) },
+      where: {
+        id: claseId,
+      },
     });
 
     if (!clase) {
@@ -42,9 +61,16 @@ export async function POST(request: Request) {
       );
     }
 
-    if (clase.precio <= 0) {
+    const montoBase =
+      tipoPago === TIPOS_PAGO.MENSUALIDAD
+        ? PRECIO_ABONO_MENSUAL
+        : Number(clase.precio);
+
+    const montoAPagar = montoBase + montoPenalizacion;
+
+    if (montoAPagar <= 0) {
       return NextResponse.json(
-        { error: "La clase no tiene un precio válido" },
+        { error: "El pago no tiene un monto válido" },
         { status: 400 }
       );
     }
@@ -54,7 +80,7 @@ export async function POST(request: Request) {
     const yaInscripto = await prisma.inscripcion.findUnique({
       where: {
         usuarioId_claseId: {
-          usuarioId: Number(usuarioId),
+          usuarioId,
           claseId: clase.id,
         },
       },
@@ -69,8 +95,9 @@ export async function POST(request: Request) {
 
     const pagoPendienteExistente = await prisma.pago.findFirst({
       where: {
-        usuarioId: Number(usuarioId),
+        usuarioId,
         claseId: clase.id,
+        tipo: tipoPago,
         estado: "PENDIENTE",
         reservaHasta: {
           gt: ahora,
@@ -117,14 +144,18 @@ export async function POST(request: Request) {
 
     const pago = await prisma.pago.create({
       data: {
-        usuarioId: Number(usuarioId),
+        usuarioId,
         claseId: clase.id,
-        monto: clase.precio,
+        monto: montoAPagar,
         estado: "PENDIENTE",
-        tipo: "CLASE_INDIVIDUAL",
+        tipo: tipoPago,
         externalReference: `sportify-pago-${crypto.randomUUID()}`,
         reservaHasta,
       },
+    });
+
+    const client = new MercadoPagoConfig({
+      accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN,
     });
 
     const preference = new Preference(client);
@@ -134,18 +165,21 @@ export async function POST(request: Request) {
         items: [
           {
             id: String(clase.id),
-            title: `Inscripción a ${clase.titulo}`,
+            title:
+              tipoPago === TIPOS_PAGO.MENSUALIDAD
+                ? `Abono mensual - ${clase.titulo}`
+                : `Inscripción a ${clase.titulo}`,
             quantity: 1,
-            unit_price: Number(clase.precio),
+            unit_price: montoAPagar,
             currency_id: "ARS",
           },
         ],
         external_reference: pago.externalReference ?? undefined,
         notification_url: `${process.env.APP_URL}/api/mercado-pago/webhook`,
         back_urls: {
-          success: `${process.env.APP_URL}/plataforma/pagos/resultado`,
-          failure: `${process.env.APP_URL}/plataforma/pagos/resultado`,
-          pending: `${process.env.APP_URL}/plataforma/pagos/resultado`,
+          success: `${process.env.APP_URL}/plataforma/pagos/resultado?resultado=success`,
+          failure: `${process.env.APP_URL}/plataforma/pagos/resultado?resultado=failure`,
+          pending: `${process.env.APP_URL}/plataforma/pagos/resultado?resultado=pending`,
         },
         auto_return: "approved",
       },
@@ -159,7 +193,9 @@ export async function POST(request: Request) {
     }
 
     await prisma.pago.update({
-      where: { id: pago.id },
+      where: {
+        id: pago.id,
+      },
       data: {
         mercadoPagoPreferenceId: String(resultado.id),
         initPoint: resultado.init_point,
