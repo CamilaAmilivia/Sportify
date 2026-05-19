@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import {
+  esMismoDiaYHorario,
+  obtenerFinDeMes,
+  TIPOS_PAGO,
+} from "@/lib/pagos";
 
 export async function POST(request: Request) {
   try {
@@ -45,7 +50,9 @@ export async function POST(request: Request) {
 
     if (status !== "approved") {
       await prisma.pago.update({
-        where: { id: pago.id },
+        where: {
+          id: pago.id,
+        },
         data: {
           estado: status === "rejected" ? "RECHAZADO" : "PENDIENTE",
           mercadoPagoPaymentId: String(paymentId),
@@ -57,7 +64,9 @@ export async function POST(request: Request) {
 
     await prisma.$transaction(async (tx) => {
       const pagoActual = await tx.pago.findUnique({
-        where: { id: pago.id },
+        where: {
+          id: pago.id,
+        },
       });
 
       if (!pagoActual) {
@@ -73,10 +82,112 @@ export async function POST(request: Request) {
       }
 
       const clase = await tx.clase.findUnique({
-        where: { id: pagoActual.claseId },
+        where: {
+          id: pagoActual.claseId,
+        },
       });
 
       if (!clase) {
+        return;
+      }
+
+      if (pagoActual.tipo === TIPOS_PAGO.MENSUALIDAD) {
+        const finDeMes = obtenerFinDeMes(clase.fechaHora);
+
+        const clasesDelMes = await tx.clase.findMany({
+          where: {
+            estado: "ACTIVA",
+            disciplinaId: clase.disciplinaId,
+            fechaHora: {
+              gte: clase.fechaHora,
+              lte: finDeMes,
+            },
+          },
+          orderBy: {
+            fechaHora: "asc",
+          },
+        });
+
+        const clasesMismoDiaYHorario = clasesDelMes.filter((claseDelMes) =>
+          esMismoDiaYHorario(clase.fechaHora, claseDelMes.fechaHora)
+        );
+
+        for (const claseDelMes of clasesMismoDiaYHorario) {
+          const yaInscripto = await tx.inscripcion.findUnique({
+            where: {
+              usuarioId_claseId: {
+                usuarioId: pagoActual.usuarioId,
+                claseId: claseDelMes.id,
+              },
+            },
+          });
+
+          if (yaInscripto) {
+            continue;
+          }
+
+          const inscriptos = await tx.inscripcion.count({
+            where: {
+              claseId: claseDelMes.id,
+              estado: "ACTIVA",
+            },
+          });
+
+          if (inscriptos >= claseDelMes.cupoMaximo) {
+            const yaEnListaEspera = await tx.listaEspera.findUnique({
+              where: {
+                usuarioId_claseId: {
+                  usuarioId: pagoActual.usuarioId,
+                  claseId: claseDelMes.id,
+                },
+              },
+            });
+
+            if (!yaEnListaEspera) {
+              const ultimaPosicion = await tx.listaEspera.aggregate({
+                where: {
+                  claseId: claseDelMes.id,
+                },
+                _max: {
+                  posicion: true,
+                },
+              });
+
+              const proximaPosicion =
+                (ultimaPosicion._max.posicion ?? 0) + 1;
+
+              await tx.listaEspera.create({
+                data: {
+                  usuarioId: pagoActual.usuarioId,
+                  claseId: claseDelMes.id,
+                  posicion: proximaPosicion,
+                },
+              });
+            }
+
+            continue;
+          }
+
+          await tx.inscripcion.create({
+            data: {
+              usuarioId: pagoActual.usuarioId,
+              claseId: claseDelMes.id,
+              estado: "ACTIVA",
+              pagoId: pagoActual.id,
+            },
+          });
+        }
+
+        await tx.pago.update({
+          where: {
+            id: pagoActual.id,
+          },
+          data: {
+            estado: "APROBADO",
+            mercadoPagoPaymentId: String(paymentId),
+          },
+        });
+
         return;
       }
 
@@ -91,7 +202,9 @@ export async function POST(request: Request) {
 
       if (inscripcionExistente) {
         await tx.pago.update({
-          where: { id: pagoActual.id },
+          where: {
+            id: pagoActual.id,
+          },
           data: {
             estado: "APROBADO",
             mercadoPagoPaymentId: String(paymentId),
@@ -110,7 +223,9 @@ export async function POST(request: Request) {
 
       if (inscriptos >= clase.cupoMaximo) {
         await tx.pago.update({
-          where: { id: pagoActual.id },
+          where: {
+            id: pagoActual.id,
+          },
           data: {
             estado: "CANCELADO",
             mercadoPagoPaymentId: String(paymentId),
@@ -120,7 +235,7 @@ export async function POST(request: Request) {
         return;
       }
 
-      const inscripcion = await tx.inscripcion.create({
+      await tx.inscripcion.create({
         data: {
           usuarioId: pagoActual.usuarioId,
           claseId: pagoActual.claseId,
@@ -130,14 +245,14 @@ export async function POST(request: Request) {
       });
 
       await tx.pago.update({
-        where: { id: pagoActual.id },
+        where: {
+          id: pagoActual.id,
+        },
         data: {
           estado: "APROBADO",
           mercadoPagoPaymentId: String(paymentId),
         },
       });
-
-      return inscripcion;
     });
 
     return NextResponse.json({ ok: true });
