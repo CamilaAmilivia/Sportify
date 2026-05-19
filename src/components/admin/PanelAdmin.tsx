@@ -1,4 +1,6 @@
-import { TarjetaAccion } from "../ui/TarjetaAccion"
+"use client";
+
+import { TarjetaAccion } from "../ui/TarjetaAccion";
 import { TarjetaEstadistica } from "../ui/TarjetaEstadistica";
 import { TituloPagina } from "../ui/TituloPagina";
 
@@ -40,7 +42,11 @@ const actividadReciente = [
   },
 ];
 
-export function PanelAdmin() {
+type PanelAdminProps = {
+  disciplinas?: Array<{ id: number; nombre: string }>;
+};
+
+export function PanelAdmin({ disciplinas = [] }: PanelAdminProps) {
   return (
     <>
       <TituloPagina titulo="Panel de Administración" />
