@@ -3,6 +3,7 @@ import { ContenidoPlataforma } from "../../components/ContenidoPlataforma";
 import { PanelAdmin } from "../../components/admin/PanelAdmin"
 import { PanelCliente } from "../../components/cliente/PanelCliente"
 import { TituloPagina } from "../../components/ui/TituloPagina"
+import { prisma } from "@/lib/prisma";
 
 export const metadata = {
   title: "Plataforma — Sportify",
@@ -11,10 +12,19 @@ export const metadata = {
 
 export default async function PaginaPlataforma() {
   const usuario = await requerirUsuarioActual();
+  
+  let disciplinas: Array<{ id: number; nombre: string }> = [];
+  
+  if (usuario.rol === "ADMIN") {
+    disciplinas = await prisma.disciplina.findMany({
+      select: { id: true, nombre: true },
+      where: { activa: true },
+    });
+  }
 
   return (
       <ContenidoPlataforma>
-        {usuario.rol === "ADMIN" && <PanelAdmin />}
+        {usuario.rol === "ADMIN" && <PanelAdmin disciplinas={disciplinas} />}
 
         {usuario.rol === "CLIENTE" && <PanelCliente />}
 
