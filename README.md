@@ -26,7 +26,9 @@ Crear un archivo `.env` y definimos la ruta de la base de datos:
 ```env
 DATABASE_URL="file:./dev.db"
 ```
-
+**2.1 Instalar Prisma.
+        npx prisma generate
+```
 **3. Crear la base de datos y generar el cliente Prisma**
 
 Para crear el archivo `dev.db`, aplicar las migraciones y generar el cliente Prisma automáticamente:
