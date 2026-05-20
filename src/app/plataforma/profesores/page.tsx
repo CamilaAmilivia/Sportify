@@ -28,7 +28,7 @@ export default async function PaginaProfesores() {
         <TarjetaAccion
           titulo="Registrar profesor"
           descripcion="Crear un nuevo usuario con rol profesor."
-          href="#"
+          href="/plataforma/profesores/registrar"
           icono="🧑‍🏫"
         />
 
