@@ -65,6 +65,19 @@ npx prisma studio
 npx prisma db seed
 ```
 
+**Prueba de asistencia con QR:**
+
+Crear una clase de prueba para el profesor por defecto (profesor@sportify.com):
+
+```bash
+npm run test:qr
+```
+
+Este comando:
+1. Limpia cualquier clase de prueba anterior.
+2. Crea una "Clase de Prueba QR" programada exactamente para el minuto actual.
+3. Inscribe automáticamente a todos los usuarios con rol `CLIENTE` en esta clase.
+
 ## Gestión de roles
 
 Los siguientes son ejemplos de cómo requerir que un usuario tenga cierto rol para ver componentes o páginas.
