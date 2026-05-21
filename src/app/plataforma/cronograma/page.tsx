@@ -3,9 +3,10 @@ import { DetalleClase } from './detalle-clase'
 import { getClasesSemana } from './actions'
 import { format, addMinutes } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { ResumenInscripcion } from './resumen'
 
 type Props = {
-  searchParams: Promise<{ claseId?: string }>
+  searchParams: Promise<{ claseId?: string ; vista?: string }>
 }
 
 const COLORES_POR_DISCIPLINA: Record<string, string> = {
@@ -19,15 +20,23 @@ const COLORES_POR_DISCIPLINA: Record<string, string> = {
 }
 
 export default async function CronogramaPage({ searchParams }: Props) {
-  const { claseId } = await searchParams
+ const { claseId, vista } = await searchParams
 
-  if (claseId) {
-    return (
-      <div style={{ padding: '32px 40px' }}>
-        <DetalleClase claseId={Number(claseId)} />
-      </div>
-    )
-  }
+if (claseId && vista === 'resumen') {
+  return (
+    <div style={{ padding: '32px 40px' }}>
+      <ResumenInscripcion claseId={Number(claseId)} />
+    </div>
+  )
+}
+
+if (claseId) {
+  return (
+    <div style={{ padding: '32px 40px' }}>
+      <DetalleClase claseId={Number(claseId)} />
+    </div>
+  )
+}
 
   const clases = await getClasesSemana(new Date())
 
