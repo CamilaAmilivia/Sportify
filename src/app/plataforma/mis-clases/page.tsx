@@ -4,7 +4,7 @@ import { PanelConstruccion } from "@/components/ui/PanelConstruccion";
 import { TarjetaEstadistica } from "@/components/ui/TarjetaEstadistica";
 
 export const metadata = {
-  title: "Mis Clases — Sportify",
+  title: "Mis clases — Sportify",
 };
 
 export default async function PaginaMisClases() {
@@ -13,7 +13,7 @@ export default async function PaginaMisClases() {
   return (
     <>
       <TituloPagina
-        titulo="Mis Clases"
+        titulo="Mis clases"
         descripcion="Consultá tus inscripciones activas y cancelá una reserva si lo necesitás."
       />
 

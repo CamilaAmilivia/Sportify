@@ -20,7 +20,7 @@ export default async function PaginaPerfil() {
   return (
     <>
       <TituloPagina
-        titulo="Mi Perfil"
+        titulo="Mi perfil"
         descripcion="Administra tu información personal y configuración de cuenta."
       />
 

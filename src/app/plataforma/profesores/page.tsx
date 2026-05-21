@@ -13,7 +13,7 @@ export default async function PaginaProfesores() {
   return (
     <>
       <TituloPagina
-        titulo="Gestión de Profesores"
+        titulo="Gestión de profesores"
         descripcion="Desde acá el administrador va a poder registrar profesores y asignarlos a clases."
       />
 

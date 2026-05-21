@@ -12,9 +12,9 @@ export const metadata = {
 
 export default async function PaginaPlataforma() {
   const usuario = await requerirUsuarioActual();
-  
+
   let disciplinas: Array<{ id: number; nombre: string }> = [];
-  
+
   if (usuario.rol === "ADMIN") {
     disciplinas = await prisma.disciplina.findMany({
       select: { id: true, nombre: true },
@@ -23,17 +23,17 @@ export default async function PaginaPlataforma() {
   }
 
   return (
-      <ContenidoPlataforma>
-        {usuario.rol === "ADMIN" && <PanelAdmin disciplinas={disciplinas} />}
+    <ContenidoPlataforma>
+      {usuario.rol === "ADMIN" && <PanelAdmin disciplinas={disciplinas} />}
 
-        {usuario.rol === "CLIENTE" && <PanelCliente />}
+      {usuario.rol === "CLIENTE" && <PanelCliente />}
 
-        {usuario.rol === "PROFESOR" && (
-          <TituloPagina
-            titulo="Panel del Profesor"
-            descripcion="Desde acá vas a poder ver tus clases asignadas y tomar asistencia."
-          />
-        )}
-      </ContenidoPlataforma>
+      {usuario.rol === "PROFESOR" && (
+        <TituloPagina
+          titulo="Panel del profesor"
+          descripcion="Desde acá vas a poder ver tus clases asignadas y tomar asistencia."
+        />
+      )}
+    </ContenidoPlataforma>
   );
 }

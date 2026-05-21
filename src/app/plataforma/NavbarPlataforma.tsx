@@ -7,7 +7,7 @@ import { cerrarSesion } from "./actions";
 import type { UsuarioSesion } from "@/tipos/usuario";
 import { navegacionPorRol, nombreRol, } from "@/configuracion/navegacion";
 
-export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}) {
+export default function NavbarPlataforma({ usuario, }: { usuario: UsuarioSesion; }) {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const pathname = usePathname();
 
@@ -98,7 +98,6 @@ export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}
                     transition: "background var(--transition)",
                   }}
                 >
-                  <span>{item.icono}</span>
                   {item.nombre}
                 </Link>
               );
@@ -169,7 +168,7 @@ export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}
             >
               👤
             </span>
-            Mi Cuenta
+            Mi cuenta
             <span>⌄</span>
           </button>
 
@@ -221,7 +220,7 @@ export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}
                   style={linkMenuCuenta}
                   onClick={() => setMenuAbierto(false)}
                 >
-                  👤 Ver Perfil
+                  👤 Ver perfil
                 </Link>
               </div>
 
@@ -248,7 +247,7 @@ export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}
                     fontSize: "0.95rem",
                   }}
                 >
-                  ↪ Cerrar Sesión
+                  ↪ Cerrar sesión
                 </button>
               </div>
             </div>
