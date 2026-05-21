@@ -223,22 +223,6 @@ export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}
                 >
                   👤 Ver Perfil
                 </Link>
-
-                <Link
-                  href="/plataforma/configuracion"
-                  style={linkMenuCuenta}
-                  onClick={() => setMenuAbierto(false)}
-                >
-                  ⚙️ Configuración
-                </Link>
-
-                <Link
-                  href="/plataforma/ayuda"
-                  style={linkMenuCuenta}
-                  onClick={() => setMenuAbierto(false)}
-                >
-                  ❔ Ayuda
-                </Link>
               </div>
 
               <div
