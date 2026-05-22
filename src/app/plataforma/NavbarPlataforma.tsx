@@ -45,7 +45,7 @@ export default function NavbarPlataforma({ usuario, }: { usuario: UsuarioSesion;
         >
           {/* Logo: no tocar */}
           <Link
-            href="/plataforma"
+            href={itemsNavegacion[0].href}
             style={{
               textDecoration: "none",
               display: "flex",
