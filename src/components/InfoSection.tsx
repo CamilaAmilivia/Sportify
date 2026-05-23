@@ -169,8 +169,7 @@ export default function InfoSection() {
           </div>
           <a
             href="https://instagram.com/sportify"
-            target="_blank"
-            rel="noopener noreferrer"
+            target="_self"
             id="link-instagram"
             style={{
               display: "inline-flex",

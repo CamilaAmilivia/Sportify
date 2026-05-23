@@ -68,7 +68,11 @@ export async function iniciarSesion(
       maxAge: 60 * 60 * 24 * 7, // 7 días
     });
 
-    redirectUrl = "/plataforma";
+    if (cliente.rol === "ADMIN") {
+      redirectUrl = "/plataforma";
+    } else {
+      redirectUrl = "/plataforma/cronograma";
+    }
   } catch (error) {
     console.error("Error al iniciar sesión:", error);
     return {

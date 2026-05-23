@@ -9,7 +9,7 @@ Sistema de gestión de reservas e información para el gimnasio Sportify.
 - TypeScript
 - Prisma
 - SQLite
-- Tailwind
+- Tailwind CSS
 
 ## Setup inicial
 
@@ -21,10 +21,16 @@ npm install
 
 **2. Crear el archivo de entorno**
 
-Crear un archivo `.env` y definimos la ruta de la base de datos:
+Crear un archivo `.env` y definir la ruta de la base de datos:
 
 ```env
 DATABASE_URL="file:./dev.db"
+```
+
+**2.1 Instalar Prisma**
+
+```bash
+npx prisma generate
 ```
 
 **3. Crear la base de datos y generar el cliente Prisma**
@@ -37,7 +43,7 @@ npx prisma migrate dev
 
 ## Ejecución local
 
-Correr servidor de desarrollo:
+Correr el servidor de desarrollo:
 
 ```bash
 npm run dev
@@ -47,21 +53,38 @@ Se despliega en [http://localhost:3000](http://localhost:3000).
 
 ## Utilidades
 
-Visualización de la base de datos con Prisma Studio:
+**Visualización de la base de datos con Prisma Studio:**
 
 ```bash
 npx prisma studio
 ```
-Cargar los seeds de la base de datos
 
+**Cargar los seeds de la base de datos:**
+
+```bash
 npx prisma db seed
+```
 
+**Prueba de asistencia con QR:**
 
+Crear una clase de prueba para el profesor por defecto (profesor@sportify.com):
 
---------------------------------------------------------------------------------------------------------
-**3. Roles, formas para hacer q compoenentes/paginas q creemos vean el ROL**
+```bash
+npm run test:qr
+```
 
-para Admin
+Este comando:
+1. Limpia cualquier clase de prueba anterior.
+2. Crea una "Clase de Prueba QR" programada exactamente para el minuto actual.
+3. Inscribe automáticamente a todos los usuarios con rol `CLIENTE` en esta clase.
+
+## Gestión de roles
+
+Los siguientes son ejemplos de cómo requerir que un usuario tenga cierto rol para ver componentes o páginas.
+
+### Para administrador
+
+```tsx
 import { requerirRol } from "@/lib/sesion";
 
 export default async function PaginaUsuarios() {
@@ -74,11 +97,12 @@ export default async function PaginaUsuarios() {
     </main>
   );
 }
+```
+*Nota: Si entra un cliente que no tiene permisos, lo redirecciona a `/plataforma`.*
 
-Con eso, si entra un cliente, lo manda a: /Plataforma
+### Para cliente
 
-
-Para Cliente
+```tsx
 import { requerirRol } from "@/lib/sesion";
 
 export default async function PaginaMisClases() {
@@ -91,8 +115,11 @@ export default async function PaginaMisClases() {
     </main>
   );
 }
+```
 
-Para AMBOS
+### Para múltiples roles (ej. admin y profesor)
+
+```tsx
 import { requerirRol } from "@/lib/sesion";
 
 export default async function PaginaAsistencia() {
@@ -105,3 +132,4 @@ export default async function PaginaAsistencia() {
     </main>
   );
 }
+```

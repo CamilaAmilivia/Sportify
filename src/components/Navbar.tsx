@@ -58,7 +58,6 @@ export default function Navbar() {
         >
           <NavLink href="/#actividades">Actividades</NavLink>
           <NavLink href="/#info">Contacto</NavLink>
-          <NavLink href="/#link-instagram">Redes</NavLink>
         </div>
 
         {/* Auth buttons */}

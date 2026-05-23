@@ -7,7 +7,7 @@ import { cerrarSesion } from "./actions";
 import type { UsuarioSesion } from "@/tipos/usuario";
 import { navegacionPorRol, nombreRol, } from "@/configuracion/navegacion";
 
-export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}) {
+export default function NavbarPlataforma({ usuario, }: { usuario: UsuarioSesion; }) {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const pathname = usePathname();
 
@@ -45,7 +45,7 @@ export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}
         >
           {/* Logo: no tocar */}
           <Link
-            href="/plataforma"
+            href={itemsNavegacion[0].href}
             style={{
               textDecoration: "none",
               display: "flex",
@@ -98,7 +98,6 @@ export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}
                     transition: "background var(--transition)",
                   }}
                 >
-                  <span>{item.icono}</span>
                   {item.nombre}
                 </Link>
               );
@@ -169,7 +168,7 @@ export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}
             >
               👤
             </span>
-            Mi Cuenta
+            Mi cuenta
             <span>⌄</span>
           </button>
 
@@ -216,32 +215,12 @@ export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}
               </div>
 
               <div style={{ padding: "8px 0" }}>
-                {usuario.rol === "CLIENTE" && (
-                  <>
-                    <Link
-                      href="/plataforma/perfil"
-                      style={linkMenuCuenta}
-                      onClick={() => setMenuAbierto(false)}
-                    >
-                      👤 Ver Perfil
-                    </Link>
-                  </>
-                )}
-
                 <Link
-                  href="/plataforma/configuracion"
+                  href="/plataforma/perfil"
                   style={linkMenuCuenta}
                   onClick={() => setMenuAbierto(false)}
                 >
-                  ⚙️ Configuración
-                </Link>
-
-                <Link
-                  href="/plataforma/ayuda"
-                  style={linkMenuCuenta}
-                  onClick={() => setMenuAbierto(false)}
-                >
-                  ❔ Ayuda
+                  👤 Ver perfil
                 </Link>
               </div>
 
@@ -268,7 +247,7 @@ export default function NavbarPlataforma( {usuario,}: { usuario: UsuarioSesion;}
                     fontSize: "0.95rem",
                   }}
                 >
-                  ↪ Cerrar Sesión
+                  ↪ Cerrar sesión
                 </button>
               </div>
             </div>
