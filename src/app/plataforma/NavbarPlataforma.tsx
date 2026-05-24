@@ -144,7 +144,7 @@ export default function NavbarPlataforma({ usuario, }: { usuario: UsuarioSesion;
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 12,
+              gap: 8,
               padding: "10px 18px",
               borderRadius: 14,
               border: "1px solid rgba(0,0,0,0.08)",
@@ -154,20 +154,6 @@ export default function NavbarPlataforma({ usuario, }: { usuario: UsuarioSesion;
               cursor: "pointer",
             }}
           >
-            <span
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: "50%",
-                background: "#22c55e",
-                color: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              👤
-            </span>
             Mi cuenta
             <span>⌄</span>
           </button>
