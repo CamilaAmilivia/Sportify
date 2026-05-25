@@ -1,6 +1,7 @@
 import { requerirUsuarioActual } from "@/lib/sesion";
 import { TituloPagina } from "@/components/ui/TituloPagina";
 import { prisma } from "@/lib/prisma";
+import FormularioCambioEmail from "./FormularioCambioEmail";
 
 export const metadata = {
   title: "Mi Perfil — Sportify",
@@ -56,7 +57,8 @@ export default async function PaginaPerfil() {
             </div>
           </div>
 
-          {/* Aquí irá el desarrollo futuro para cambiar correo o editar datos */}
+          {/* Formulario para cambiar el correo electrónico */}
+          <FormularioCambioEmail />
         </div>
       </div>
     </>
