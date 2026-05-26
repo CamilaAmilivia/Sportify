@@ -136,22 +136,15 @@ export default function NavbarPlataforma({
       >
         {/* Grupo izquierdo: logo + links */}
         <div style={{ display: "flex", alignItems: "center", gap: 36 }}>
-          <Link
-            href={itemsNavegacion[0].href}
-            style={{ display: "flex", alignItems: "center", textDecoration: "none" }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLElement).style.transform = "scale(1.04)")
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLElement).style.transform = "scale(1)")
-            }
+          <div
+            style={{ display: "flex", alignItems: "center" }}
           >
             <img
               src="/logo.svg"
               alt="Sportify Logo"
               style={{ height: 44, width: "auto", objectFit: "contain" }}
             />
-          </Link>
+          </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             {itemsNavegacion.map((item) => {
@@ -272,16 +265,15 @@ export default function NavbarPlataforma({
             borderBottom: "1px solid rgba(0,0,0,0.06)",
           }}
         >
-          <Link
-            href={itemsNavegacion[0].href}
-            style={{ display: "flex", alignItems: "center", textDecoration: "none" }}
+          <div
+            style={{ display: "flex", alignItems: "center" }}
           >
             <img
               src="/logo.svg"
               alt="Sportify Logo"
               style={{ height: 40, width: "auto", objectFit: "contain" }}
             />
-          </Link>
+          </div>
 
           <button
             type="button"
