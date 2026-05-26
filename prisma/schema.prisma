@@ -73,7 +73,7 @@ model Clase {
   descripcion String?
   fechaHora   DateTime
   duracionMin Int
-  cupoMaximo  Int
+  cupoMaximo  Int        @default(1)
   precio      Float      @default(0)
   estado      EstadoClase @default(ACTIVA)
   createdAt   DateTime    @default(now())
