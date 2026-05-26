@@ -1,7 +1,7 @@
 // Al inicio de CalendarioSemanal.tsx, antes del primer import de react
 'use client'
 
-
+import { useRouter } from 'next/navigation'
 import { useState, useMemo } from 'react'
 import { format, startOfWeek, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -286,8 +286,9 @@ interface CalendarioSemanalProps {
   actividades?: Actividad[]
 }
 
-export default function CalendarioSemanal({ actividades = ACTIVIDADES_EJEMPLO }: CalendarioSemanalProps) {
+export default function CalendarioSemanal({ actividades = [] }: CalendarioSemanalProps) {
   const [semanaBase, setSemanaBase] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const router = useRouter()
   const [actividadSeleccionada, setActividadSeleccionada] = useState<Actividad | null>(null)
   const [filtroDia, setFiltroDia] = useState<DiaSemana | 'Todos'>('Todos')
   const [filtroNombre, setFiltroNombre] = useState('')
@@ -310,9 +311,23 @@ export default function CalendarioSemanal({ actividades = ACTIVIDADES_EJEMPLO }:
   const actividadesPorDia = (dia: DiaSemana) =>
     actividadesFiltradas.filter((a) => a.dia === dia)
 
-  const irSemanaAnterior = () => setSemanaBase((d) => addDays(d, -7))
-  const irSemanaSiguiente = () => setSemanaBase((d) => addDays(d, 7))
-  const irHoy = () => setSemanaBase(startOfWeek(new Date(), { weekStartsOn: 1 }))
+const irSemanaAnterior = () => {
+  const nueva = addDays(semanaBase, -7)
+  setSemanaBase(nueva)
+  router.push(`/plataforma/cronograma?semana=${format(nueva, 'yyyy-MM-dd')}`)
+}
+
+const irSemanaSiguiente = () => {
+  const nueva = addDays(semanaBase, 7)
+  setSemanaBase(nueva)
+  router.push(`/plataforma/cronograma?semana=${format(nueva, 'yyyy-MM-dd')}`)
+}
+
+const irHoy = () => {
+  const nueva = startOfWeek(new Date(), { weekStartsOn: 1 })
+  setSemanaBase(nueva)
+  router.push(`/plataforma/cronograma`)
+}
 
   const hoy = format(new Date(), 'EEEE', { locale: es })
 
