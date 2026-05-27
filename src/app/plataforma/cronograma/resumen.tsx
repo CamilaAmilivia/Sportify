@@ -1,46 +1,25 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { requerirUsuarioActual } from "@/lib/sesion";
 import { BotonPagarMercadoPago } from "@/components/pagos/BotonPagarMercadoPago";
-import { PRECIO_ABONO_MENSUAL, TIPOS_PAGO } from "@/lib/pagos";
+import {
+  PRECIO_ABONO_MENSUAL,
+  TIPOS_PAGO,
+  normalizarTipoPago,
+  type TipoPagoSportify,
+} from "@/lib/pagos";
 
 type ResumenInscripcionProps = {
   claseId: number;
+  tipoPago?: string;
 };
 
-async function obtenerClienteDePrueba() {
-  return prisma.usuario.findUnique({
-    where: {
-      email: "cliente@sportify.com",
-    },
-  });
-}
+export async function ResumenInscripcion({
+  claseId,
+  tipoPago,
+}: ResumenInscripcionProps) {
+  const usuario = await requerirUsuarioActual();
 
-async function obtenerPenalizacionPendiente(usuarioId: number) {
-  const usuario = await prisma.usuario.findUnique({
-    where: {
-      id: usuarioId,
-    },
-    select: {
-      email: true,
-    },
-  });
-
-  /**
-   * MOCK TEMPORAL:
-   * Sirve para probar visualmente la penalización.
-   * Más adelante esto debería salir de una tabla real de penalizaciones.
-   */
-  if (usuario?.email === "cliente@sportify.com") {
-    return {
-      monto: 2500,
-      motivo: "Penalización por inasistencia a una clase reservada",
-    };
-  }
-
-  return null;
-}
-
-export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
   const clase = await prisma.clase.findUnique({
     where: {
       id: claseId,
@@ -72,38 +51,19 @@ export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
     );
   }
 
-  const cliente = await obtenerClienteDePrueba();
+  const tipoPagoSeleccionado: TipoPagoSportify = normalizarTipoPago(
+    tipoPago ?? TIPOS_PAGO.CLASE_INDIVIDUAL
+  );
 
-  if (!cliente) {
-    return (
-      <>
-        <Link
-          href={`/plataforma/cronograma?claseId=${clase.id}`}
-          style={{
-            display: "inline-block",
-            marginBottom: 24,
-            color: "#16a34a",
-            fontWeight: 700,
-            textDecoration: "none",
-          }}
-        >
-          ← Volver a la clase
-        </Link>
+  const esAbono = tipoPagoSeleccionado === TIPOS_PAGO.MENSUALIDAD;
+  const esClaseIndividual =
+    tipoPagoSeleccionado === TIPOS_PAGO.CLASE_INDIVIDUAL;
 
-        <p>
-          No se encontró el cliente de prueba. Corré el seed para crear{" "}
-          <strong>cliente@sportify.com</strong>.
-        </p>
-      </>
-    );
-  }
+  const montoClaseIndividual = Number(clase.precio);
 
-  const penalizacion = await obtenerPenalizacionPendiente(cliente.id);
-
-  const tipoPagoSeleccionado = TIPOS_PAGO.MENSUALIDAD;
-  const montoBase = PRECIO_ABONO_MENSUAL;
-  const montoPenalizacion = penalizacion?.monto ?? 0;
-  const total = montoBase + montoPenalizacion;
+  const montoTotal = esAbono
+    ? PRECIO_ABONO_MENSUAL
+    : montoClaseIndividual;
 
   return (
     <>
@@ -177,12 +137,16 @@ export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
             marginTop: 12,
           }}
         >
-          <div
+          <Link
+            href={`/plataforma/cronograma?claseId=${clase.id}&vista=resumen&tipoPago=${TIPOS_PAGO.MENSUALIDAD}`}
             style={{
-              border: "1px solid #22c55e",
+              border: esAbono ? "1px solid #22c55e" : "1px solid #e5e7eb",
               borderRadius: 12,
               padding: 20,
-              background: "#f0fdf4",
+              background: esAbono ? "#f0fdf4" : "white",
+              textDecoration: "none",
+              color: "inherit",
+              display: "block",
             }}
           >
             <div style={{ fontSize: 28 }}>📅</div>
@@ -196,15 +160,20 @@ export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
             <p style={{ color: "#16a34a", fontWeight: 800, fontSize: 22 }}>
               ${PRECIO_ABONO_MENSUAL.toLocaleString("es-AR")}/mes
             </p>
-          </div>
+          </Link>
 
-          <div
+          <Link
+            href={`/plataforma/cronograma?claseId=${clase.id}&vista=resumen&tipoPago=${TIPOS_PAGO.CLASE_INDIVIDUAL}`}
             style={{
-              border: "1px solid #e5e7eb",
+              border: esClaseIndividual
+                ? "1px solid #22c55e"
+                : "1px solid #e5e7eb",
               borderRadius: 12,
               padding: 20,
-              background: "white",
-              opacity: 0.75,
+              background: esClaseIndividual ? "#f0fdf4" : "white",
+              textDecoration: "none",
+              color: "inherit",
+              display: "block",
             }}
           >
             <div style={{ fontSize: 28 }}>💲</div>
@@ -216,49 +185,30 @@ export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
             </p>
 
             <p style={{ fontWeight: 800, fontSize: 22 }}>
-              ${clase.precio.toLocaleString("es-AR")}
+              ${montoClaseIndividual.toLocaleString("es-AR")}
             </p>
-          </div>
+          </Link>
         </div>
 
-        <div
-          style={{
-            marginTop: 20,
-            padding: 16,
-            borderRadius: 10,
-            background: "#f0fdf4",
-            border: "1px solid #bbf7d0",
-            color: "#166534",
-          }}
-        >
-          <strong>Beneficios del abono</strong>
-          <br />
-          ✓ Horario fijo garantizado cada semana
-          <br />
-          ✓ Prioridad en lista de espera
-          <br />
-          ✓ Créditos por clases perdidas
-          <br />✓ Precio más económico que clases individuales
-        </div>
-
-        {penalizacion && (
+        {esAbono && (
           <div
             style={{
               marginTop: 20,
               padding: 16,
               borderRadius: 10,
-              background: "#fef2f2",
-              border: "1px solid #fecaca",
-              color: "#b91c1c",
+              background: "#f0fdf4",
+              border: "1px solid #bbf7d0",
+              color: "#166534",
             }}
           >
-            <strong>Penalización pendiente obligatoria</strong>
-
-            <p style={{ marginTop: 6 }}>{penalizacion.motivo}</p>
-
-            <p style={{ fontWeight: 800, marginTop: 6 }}>
-              + ${penalizacion.monto.toLocaleString("es-AR")}
-            </p>
+            <strong>Beneficios del abono</strong>
+            <br />
+            ✓ Horario fijo garantizado cada semana
+            <br />
+            ✓ Prioridad en lista de espera
+            <br />
+            ✓ Créditos por clases perdidas
+            <br />✓ Precio más económico que clases individuales
           </div>
         )}
 
@@ -273,24 +223,10 @@ export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span>Abono mensual</span>
-            <strong>${montoBase.toLocaleString("es-AR")}</strong>
+            <span>{esAbono ? "Abono mensual" : "Clase individual"}</span>
+
+            <strong>${montoTotal.toLocaleString("es-AR")}</strong>
           </div>
-
-          {penalizacion && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginTop: 10,
-                color: "#dc2626",
-              }}
-            >
-              <span>Penalización obligatoria</span>
-
-              <strong>+ ${montoPenalizacion.toLocaleString("es-AR")}</strong>
-            </div>
-          )}
 
           <hr style={{ margin: "14px 0", borderColor: "#e5e7eb" }} />
 
@@ -303,7 +239,7 @@ export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
             }}
           >
             <span>Total a pagar ahora</span>
-            <span>${total.toLocaleString("es-AR")}</span>
+            <span>${montoTotal.toLocaleString("es-AR")}</span>
           </div>
         </div>
 
@@ -320,19 +256,32 @@ export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
         >
           <strong>ⓘ Información importante</strong>
           <br />
-          • El abono registra las clases semanales restantes del mes.
-          <br />
-          • Si alguna clase futura no tiene cupo, se genera lista de espera.
-          <br />
-          • La inscripción se confirma solamente si el pago es aprobado.
+
+          {esAbono ? (
+            <>
+              • El abono registra las clases semanales restantes del mes.
+              <br />
+              • Si alguna clase futura no tiene cupo, se genera lista de espera.
+              <br />
+              • La inscripción se confirma solamente si el pago es aprobado.
+            </>
+          ) : (
+            <>
+              • La inscripción corresponde únicamente a esta clase.
+              <br />
+              • La inscripción se confirma solamente si el pago es aprobado.
+              <br />
+              • Si ya estás inscripta, el sistema no permitirá repetir la
+              inscripción.
+            </>
+          )}
         </div>
 
         <div style={{ marginTop: 24 }}>
           <BotonPagarMercadoPago
             claseId={clase.id}
-            usuarioId={cliente.id}
+            usuarioId={usuario.id}
             tipoPago={tipoPagoSeleccionado}
-            montoPenalizacion={montoPenalizacion}
           />
         </div>
       </section>
