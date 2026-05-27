@@ -137,6 +137,11 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
             <br />
             {clase.profesor.nombre} {clase.profesor.apellido}
           </p>
+
+          <p>
+            <strong>Precio clase individual</strong>
+            <br />${clase.precio.toLocaleString("es-AR")}
+          </p>
         </div>
 
         <div style={{ marginTop: 32 }}>
@@ -169,7 +174,7 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
         </div>
 
         <Link
-          href={`/plataforma/cronograma?claseId=${clase.id}&vista=resumen`}
+          href={`/plataforma/cronograma?claseId=${clase.id}&vista=resumen&tipoPago=CLASE_INDIVIDUAL`}
           style={{
             display: "block",
             textAlign: "center",

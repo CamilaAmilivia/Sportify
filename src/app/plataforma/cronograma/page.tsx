@@ -4,9 +4,10 @@ import { getClasesSemana } from './actions'
 import { format, addMinutes } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ResumenInscripcion } from './resumen'
+import { ToastInscripcion } from "@/components/ui/ToastInscripcion";
 
 type Props = {
-  searchParams: Promise<{ claseId?: string; vista?: string; semana?: string }>
+  searchParams: Promise<{ claseId?: string; vista?: string; semana?: string ; tipoPago?: string}>
 }
 
 const COLORES_POR_DISCIPLINA: Record<string, string> = {
@@ -20,12 +21,13 @@ const COLORES_POR_DISCIPLINA: Record<string, string> = {
 }
 
 export default async function CronogramaPage({ searchParams }: Props) {
-  const { claseId, vista, semana } = await searchParams
+
+  const { claseId, vista, semana , tipoPago} = await searchParams
 
 if (claseId && vista === 'resumen') {
   return (
     <div style={{ padding: '32px 40px' }}>
-      <ResumenInscripcion claseId={Number(claseId)} />
+      <ResumenInscripcion claseId={Number(claseId)} tipoPago={tipoPago} />
     </div>
   )
 }
@@ -59,5 +61,10 @@ if (claseId) {
     }
   })
 
-  return <CalendarioSemanal actividades={actividades} />
+  return (
+    <>
+    <ToastInscripcion />
+    <CalendarioSemanal actividades={actividades} /> 
+    </>
+  )
 }
