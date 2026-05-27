@@ -136,16 +136,16 @@ interface TarjetaActividadProps {
   onClick: (a: Actividad) => void
 }
 
-function TarjetaActividad({ actividad, onClick }: TarjetaActividadProps) {
+function TarjetaActividad({ actividad }: { actividad: Actividad }) {
   const c = colorDe(actividad.color)
   const lleno = actividad.inscriptos >= actividad.capacidadMaxima
   const pct = porcentajeLleno(actividad.inscriptos, actividad.capacidadMaxima)
 
   return (
-    <button
-      onClick={() => onClick(actividad)}
+    <Link
+      href={`/plataforma/cronograma?claseId=${actividad.id}`}
       className={`
-        w-full text-left rounded-lg border-l-4 p-3 mb-2 transition-all duration-150
+        block w-full text-left rounded-lg border-l-4 p-3 mb-2 transition-all duration-150
         hover:shadow-md hover:-translate-y-0.5 active:scale-95
         ${c.bg} ${c.borde}
         ${lleno ? 'opacity-70' : ''}
@@ -185,7 +185,7 @@ function TarjetaActividad({ actividad, onClick }: TarjetaActividadProps) {
           />
         </div>
       </div>
-    </button>
+    </Link>
   )
 }
 
@@ -436,9 +436,8 @@ const irHoy = () => {
                   ) : (
                     items.map((act) => (
                       <TarjetaActividad
-                        key={act.id}
-                        actividad={act}
-                        onClick={setActividadSeleccionada}
+                      key={act.id}
+                      actividad={act}
                       />
                     ))
                   )}
