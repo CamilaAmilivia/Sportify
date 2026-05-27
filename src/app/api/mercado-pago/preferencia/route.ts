@@ -19,11 +19,6 @@ export async function POST(request: Request) {
     const usuarioId = Number(body.usuarioId);
     const tipoPago = normalizarTipoPago(body.tipoPago);
 
-    const montoPenalizacion =
-      tipoPago === TIPOS_PAGO.MENSUALIDAD
-        ? Math.max(0, Number(body.montoPenalizacion ?? 0))
-        : 0;
-
     if (!claseId || !usuarioId) {
       return NextResponse.json(
         { error: "Faltan datos para iniciar el pago" },
@@ -64,41 +59,41 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    let montoBase = Number(clase.precio);
 
-if (tipoPago === TIPOS_PAGO.MENSUALIDAD) {
-  const inicioDeMes = obtenerInicioDeMes(clase.fechaHora);
-  const finDeMes = obtenerFinDeMes(clase.fechaHora);
+    let montoAPagar = Number(clase.precio);
 
-  const clasesDelMes = await prisma.clase.findMany({
-    where: {
-      estado: "ACTIVA",
-      disciplinaId: clase.disciplinaId,
-      fechaHora: {
-        gte: inicioDeMes,
-        lte: finDeMes,
-      },
-    },
-    orderBy: {
-      fechaHora: "asc",
-    },
-  });
+    if (tipoPago === TIPOS_PAGO.MENSUALIDAD) {
+      const inicioDeMes = obtenerInicioDeMes(clase.fechaHora);
+      const finDeMes = obtenerFinDeMes(clase.fechaHora);
 
-  const clasesMismoDiaYHorario = clasesDelMes.filter((claseDelMes) =>
-    esMismoDiaYHorario(clase.fechaHora, claseDelMes.fechaHora)
-  );
+      const clasesDelMes = await prisma.clase.findMany({
+        where: {
+          estado: "ACTIVA",
+          disciplinaId: clase.disciplinaId,
+          fechaHora: {
+            gte: inicioDeMes,
+            lte: finDeMes,
+          },
+        },
+        orderBy: {
+          fechaHora: "asc",
+        },
+      });
 
-  const clasesRestantesDelMes = clasesMismoDiaYHorario.filter(
-    (claseDelMes) => claseDelMes.fechaHora >= clase.fechaHora
-  );
+      const clasesMismoDiaYHorario = clasesDelMes.filter((claseDelMes) =>
+        esMismoDiaYHorario(clase.fechaHora, claseDelMes.fechaHora)
+      );
 
-  montoBase = calcularPrecioAbonoProporcional({
-    precioMensual: PRECIO_ABONO_MENSUAL,
-    totalClasesDelMes: clasesMismoDiaYHorario.length,
-    clasesRestantesDelMes: clasesRestantesDelMes.length,
-  });
-}
-    const montoAPagar = montoBase + montoPenalizacion;
+      const clasesRestantesDelMes = clasesMismoDiaYHorario.filter(
+        (claseDelMes) => claseDelMes.fechaHora >= clase.fechaHora
+      );
+
+      montoAPagar = calcularPrecioAbonoProporcional({
+        precioMensual: PRECIO_ABONO_MENSUAL,
+        totalClasesDelMes: clasesMismoDiaYHorario.length,
+        clasesRestantesDelMes: clasesRestantesDelMes.length,
+      });
+    }
 
     if (montoAPagar <= 0) {
       return NextResponse.json(
@@ -120,7 +115,7 @@ if (tipoPago === TIPOS_PAGO.MENSUALIDAD) {
 
     if (yaInscripto) {
       return NextResponse.json(
-        { error: "El usuario ya está inscripto en esta clase" },
+        { error: "Ya estás inscripta en esta clase" },
         { status: 400 }
       );
     }
@@ -238,10 +233,20 @@ if (tipoPago === TIPOS_PAGO.MENSUALIDAD) {
       initPoint: resultado.init_point,
     });
   } catch (error) {
+    const detalle =
+      error instanceof Error
+        ? error.message
+        : typeof error === "object"
+          ? JSON.stringify(error)
+          : String(error);
+
     console.error("Error creando preferencia de Mercado Pago:", error);
 
     return NextResponse.json(
-      { error: "Error al iniciar el pago" },
+      {
+        error: "Error al iniciar el pago",
+        detalle,
+      },
       { status: 500 }
     );
   }

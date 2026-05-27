@@ -7,29 +7,20 @@ type BotonPagarMercadoPagoProps = {
   claseId: number;
   usuarioId: number;
   tipoPago?: TipoPagoSportify;
-  montoPenalizacion?: number;
 };
 
 export function BotonPagarMercadoPago({
   claseId,
   usuarioId,
   tipoPago = TIPOS_PAGO.CLASE_INDIVIDUAL,
-  montoPenalizacion = 0,
 }: BotonPagarMercadoPagoProps) {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function pagar() {
-    const pestaniaPago = window.open("", "_blank");
-
     try {
       setCargando(true);
       setError(null);
-
-      if (pestaniaPago) {
-        pestaniaPago.document.write("Abriendo Mercado Pago...");
-        pestaniaPago.opener = null;
-      }
 
       const response = await fetch("/api/mercado-pago/preferencia", {
         method: "POST",
@@ -40,31 +31,23 @@ export function BotonPagarMercadoPago({
           claseId,
           usuarioId,
           tipoPago,
-          montoPenalizacion,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        pestaniaPago?.close();
-        setError(data.error ?? "No se pudo iniciar el pago");
+        setError(data.detalle ?? data.error ?? "No se pudo iniciar el pago");
         return;
       }
 
       if (!data.initPoint) {
-        pestaniaPago?.close();
         setError("No se recibió el link de pago");
         return;
       }
 
-      if (pestaniaPago) {
-        pestaniaPago.location.href = data.initPoint;
-      } else {
-        window.location.href = data.initPoint;
-      }
+      window.location.href = data.initPoint;
     } catch (error) {
-      pestaniaPago?.close();
       console.error("Error iniciando pago:", error);
       setError("Error al iniciar el pago");
     } finally {

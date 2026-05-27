@@ -4,6 +4,7 @@ import { getClasesSemana } from './actions'
 import { format, addMinutes } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ResumenInscripcion } from './resumen'
+import { ToastInscripcion } from "@/components/ui/ToastInscripcion";
 
 type Props = {
   searchParams: Promise<{ claseId?: string; vista?: string; semana?: string ; tipoPago?: string}>
@@ -60,5 +61,10 @@ if (claseId) {
     }
   })
 
-  return <CalendarioSemanal actividades={actividades} />
+  return (
+    <>
+    <ToastInscripcion />
+    <CalendarioSemanal actividades={actividades} /> 
+    </>
+  )
 }

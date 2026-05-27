@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { requerirUsuarioActual } from "@/lib/sesion";
 import { BotonPagarMercadoPago } from "@/components/pagos/BotonPagarMercadoPago";
 import {
   PRECIO_ABONO_MENSUAL,
@@ -13,43 +14,12 @@ type ResumenInscripcionProps = {
   tipoPago?: string;
 };
 
-async function obtenerClienteDePrueba() {
-  return prisma.usuario.findUnique({
-    where: {
-      email: "cliente@sportify.com",
-    },
-  });
-}
-
-async function obtenerPenalizacionPendiente(usuarioId: number) {
-  const usuario = await prisma.usuario.findUnique({
-    where: {
-      id: usuarioId,
-    },
-    select: {
-      email: true,
-    },
-  });
-
-  /**
-   * MOCK TEMPORAL:
-   * Sirve para probar visualmente la penalización.
-   * Más adelante esto debería salir de una tabla real de penalizaciones.
-   */
-  if (usuario?.email === "cliente@sportify.com") {
-    return {
-      monto: 2500,
-      motivo: "Penalización por inasistencia a una clase reservada",
-    };
-  }
-
-  return null;
-}
-
 export async function ResumenInscripcion({
   claseId,
   tipoPago,
 }: ResumenInscripcionProps) {
+  const usuario = await requerirUsuarioActual();
+
   const clase = await prisma.clase.findUnique({
     where: {
       id: claseId,
@@ -81,45 +51,19 @@ export async function ResumenInscripcion({
     );
   }
 
-  const cliente = await obtenerClienteDePrueba();
-
-  if (!cliente) {
-    return (
-      <>
-        <Link
-          href={`/plataforma/cronograma?claseId=${clase.id}`}
-          style={{
-            display: "inline-block",
-            marginBottom: 24,
-            color: "#16a34a",
-            fontWeight: 700,
-            textDecoration: "none",
-          }}
-        >
-          ← Volver a la clase
-        </Link>
-
-        <p>
-          No se encontró el cliente de prueba. Corré el seed para crear{" "}
-          <strong>cliente@sportify.com</strong>.
-        </p>
-      </>
-    );
-  }
-
-  const penalizacion = await obtenerPenalizacionPendiente(cliente.id);
-
   const tipoPagoSeleccionado: TipoPagoSportify = normalizarTipoPago(
-    tipoPago ?? TIPOS_PAGO.MENSUALIDAD
+    tipoPago ?? TIPOS_PAGO.CLASE_INDIVIDUAL
   );
 
   const esAbono = tipoPagoSeleccionado === TIPOS_PAGO.MENSUALIDAD;
   const esClaseIndividual =
     tipoPagoSeleccionado === TIPOS_PAGO.CLASE_INDIVIDUAL;
 
-  const montoBase = esAbono ? PRECIO_ABONO_MENSUAL : Number(clase.precio);
-  const montoPenalizacion = penalizacion?.monto ?? 0;
-  const total = montoBase + montoPenalizacion;
+  const montoClaseIndividual = Number(clase.precio);
+
+  const montoTotal = esAbono
+    ? PRECIO_ABONO_MENSUAL
+    : montoClaseIndividual;
 
   return (
     <>
@@ -241,7 +185,7 @@ export async function ResumenInscripcion({
             </p>
 
             <p style={{ fontWeight: 800, fontSize: 22 }}>
-              ${Number(clase.precio).toLocaleString("es-AR")}
+              ${montoClaseIndividual.toLocaleString("es-AR")}
             </p>
           </Link>
         </div>
@@ -268,27 +212,6 @@ export async function ResumenInscripcion({
           </div>
         )}
 
-        {penalizacion && (
-          <div
-            style={{
-              marginTop: 20,
-              padding: 16,
-              borderRadius: 10,
-              background: "#fef2f2",
-              border: "1px solid #fecaca",
-              color: "#b91c1c",
-            }}
-          >
-            <strong>Penalización pendiente obligatoria</strong>
-
-            <p style={{ marginTop: 6 }}>{penalizacion.motivo}</p>
-
-            <p style={{ fontWeight: 800, marginTop: 6 }}>
-              + ${penalizacion.monto.toLocaleString("es-AR")}
-            </p>
-          </div>
-        )}
-
         <h2 style={{ marginTop: 28, fontSize: 18 }}>Resumen de pago</h2>
 
         <div
@@ -301,23 +224,9 @@ export async function ResumenInscripcion({
         >
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span>{esAbono ? "Abono mensual" : "Clase individual"}</span>
-            <strong>${montoBase.toLocaleString("es-AR")}</strong>
+
+            <strong>${montoTotal.toLocaleString("es-AR")}</strong>
           </div>
-
-          {penalizacion && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginTop: 10,
-                color: "#dc2626",
-              }}
-            >
-              <span>Penalización obligatoria</span>
-
-              <strong>+ ${montoPenalizacion.toLocaleString("es-AR")}</strong>
-            </div>
-          )}
 
           <hr style={{ margin: "14px 0", borderColor: "#e5e7eb" }} />
 
@@ -330,7 +239,7 @@ export async function ResumenInscripcion({
             }}
           >
             <span>Total a pagar ahora</span>
-            <span>${total.toLocaleString("es-AR")}</span>
+            <span>${montoTotal.toLocaleString("es-AR")}</span>
           </div>
         </div>
 
@@ -371,9 +280,8 @@ export async function ResumenInscripcion({
         <div style={{ marginTop: 24 }}>
           <BotonPagarMercadoPago
             claseId={clase.id}
-            usuarioId={cliente.id}
+            usuarioId={usuario.id}
             tipoPago={tipoPagoSeleccionado}
-            montoPenalizacion={montoPenalizacion}
           />
         </div>
       </section>
