@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { BotonPagarMercadoPago } from "@/components/pagos/BotonPagarMercadoPago";
-import { PRECIO_ABONO_MENSUAL, TIPOS_PAGO } from "@/lib/pagos";
+import {
+  PRECIO_ABONO_MENSUAL,
+  TIPOS_PAGO,
+  normalizarTipoPago,
+  type TipoPagoSportify,
+} from "@/lib/pagos";
 
 type ResumenInscripcionProps = {
   claseId: number;
+  tipoPago?: string;
 };
 
 async function obtenerClienteDePrueba() {
@@ -40,7 +46,10 @@ async function obtenerPenalizacionPendiente(usuarioId: number) {
   return null;
 }
 
-export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
+export async function ResumenInscripcion({
+  claseId,
+  tipoPago,
+}: ResumenInscripcionProps) {
   const clase = await prisma.clase.findUnique({
     where: {
       id: claseId,
@@ -100,8 +109,15 @@ export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
 
   const penalizacion = await obtenerPenalizacionPendiente(cliente.id);
 
-  const tipoPagoSeleccionado = TIPOS_PAGO.MENSUALIDAD;
-  const montoBase = PRECIO_ABONO_MENSUAL;
+  const tipoPagoSeleccionado: TipoPagoSportify = normalizarTipoPago(
+    tipoPago ?? TIPOS_PAGO.MENSUALIDAD
+  );
+
+  const esAbono = tipoPagoSeleccionado === TIPOS_PAGO.MENSUALIDAD;
+  const esClaseIndividual =
+    tipoPagoSeleccionado === TIPOS_PAGO.CLASE_INDIVIDUAL;
+
+  const montoBase = esAbono ? PRECIO_ABONO_MENSUAL : Number(clase.precio);
   const montoPenalizacion = penalizacion?.monto ?? 0;
   const total = montoBase + montoPenalizacion;
 
@@ -177,12 +193,16 @@ export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
             marginTop: 12,
           }}
         >
-          <div
+          <Link
+            href={`/plataforma/cronograma?claseId=${clase.id}&vista=resumen&tipoPago=${TIPOS_PAGO.MENSUALIDAD}`}
             style={{
-              border: "1px solid #22c55e",
+              border: esAbono ? "1px solid #22c55e" : "1px solid #e5e7eb",
               borderRadius: 12,
               padding: 20,
-              background: "#f0fdf4",
+              background: esAbono ? "#f0fdf4" : "white",
+              textDecoration: "none",
+              color: "inherit",
+              display: "block",
             }}
           >
             <div style={{ fontSize: 28 }}>📅</div>
@@ -196,15 +216,20 @@ export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
             <p style={{ color: "#16a34a", fontWeight: 800, fontSize: 22 }}>
               ${PRECIO_ABONO_MENSUAL.toLocaleString("es-AR")}/mes
             </p>
-          </div>
+          </Link>
 
-          <div
+          <Link
+            href={`/plataforma/cronograma?claseId=${clase.id}&vista=resumen&tipoPago=${TIPOS_PAGO.CLASE_INDIVIDUAL}`}
             style={{
-              border: "1px solid #e5e7eb",
+              border: esClaseIndividual
+                ? "1px solid #22c55e"
+                : "1px solid #e5e7eb",
               borderRadius: 12,
               padding: 20,
-              background: "white",
-              opacity: 0.75,
+              background: esClaseIndividual ? "#f0fdf4" : "white",
+              textDecoration: "none",
+              color: "inherit",
+              display: "block",
             }}
           >
             <div style={{ fontSize: 28 }}>💲</div>
@@ -216,30 +241,32 @@ export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
             </p>
 
             <p style={{ fontWeight: 800, fontSize: 22 }}>
-              ${clase.precio.toLocaleString("es-AR")}
+              ${Number(clase.precio).toLocaleString("es-AR")}
             </p>
-          </div>
+          </Link>
         </div>
 
-        <div
-          style={{
-            marginTop: 20,
-            padding: 16,
-            borderRadius: 10,
-            background: "#f0fdf4",
-            border: "1px solid #bbf7d0",
-            color: "#166534",
-          }}
-        >
-          <strong>Beneficios del abono</strong>
-          <br />
-          ✓ Horario fijo garantizado cada semana
-          <br />
-          ✓ Prioridad en lista de espera
-          <br />
-          ✓ Créditos por clases perdidas
-          <br />✓ Precio más económico que clases individuales
-        </div>
+        {esAbono && (
+          <div
+            style={{
+              marginTop: 20,
+              padding: 16,
+              borderRadius: 10,
+              background: "#f0fdf4",
+              border: "1px solid #bbf7d0",
+              color: "#166534",
+            }}
+          >
+            <strong>Beneficios del abono</strong>
+            <br />
+            ✓ Horario fijo garantizado cada semana
+            <br />
+            ✓ Prioridad en lista de espera
+            <br />
+            ✓ Créditos por clases perdidas
+            <br />✓ Precio más económico que clases individuales
+          </div>
+        )}
 
         {penalizacion && (
           <div
@@ -273,7 +300,7 @@ export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span>Abono mensual</span>
+            <span>{esAbono ? "Abono mensual" : "Clase individual"}</span>
             <strong>${montoBase.toLocaleString("es-AR")}</strong>
           </div>
 
@@ -320,11 +347,25 @@ export async function ResumenInscripcion({ claseId }: ResumenInscripcionProps) {
         >
           <strong>ⓘ Información importante</strong>
           <br />
-          • El abono registra las clases semanales restantes del mes.
-          <br />
-          • Si alguna clase futura no tiene cupo, se genera lista de espera.
-          <br />
-          • La inscripción se confirma solamente si el pago es aprobado.
+
+          {esAbono ? (
+            <>
+              • El abono registra las clases semanales restantes del mes.
+              <br />
+              • Si alguna clase futura no tiene cupo, se genera lista de espera.
+              <br />
+              • La inscripción se confirma solamente si el pago es aprobado.
+            </>
+          ) : (
+            <>
+              • La inscripción corresponde únicamente a esta clase.
+              <br />
+              • La inscripción se confirma solamente si el pago es aprobado.
+              <br />
+              • Si ya estás inscripta, el sistema no permitirá repetir la
+              inscripción.
+            </>
+          )}
         </div>
 
         <div style={{ marginTop: 24 }}>

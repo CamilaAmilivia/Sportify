@@ -6,7 +6,7 @@ import { es } from 'date-fns/locale'
 import { ResumenInscripcion } from './resumen'
 
 type Props = {
-  searchParams: Promise<{ claseId?: string ; vista?: string }>
+  searchParams: Promise<{ claseId?: string ; vista?: string ; tipoPago?: string}>
 }
 
 const COLORES_POR_DISCIPLINA: Record<string, string> = {
@@ -20,12 +20,12 @@ const COLORES_POR_DISCIPLINA: Record<string, string> = {
 }
 
 export default async function CronogramaPage({ searchParams }: Props) {
- const { claseId, vista } = await searchParams
+ const { claseId, vista, tipoPago } = await searchParams
 
 if (claseId && vista === 'resumen') {
   return (
     <div style={{ padding: '32px 40px' }}>
-      <ResumenInscripcion claseId={Number(claseId)} />
+      <ResumenInscripcion claseId={Number(claseId)} tipoPago={tipoPago} />
     </div>
   )
 }

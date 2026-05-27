@@ -156,13 +156,16 @@ export async function POST(request: Request) {
               const proximaPosicion =
                 (ultimaPosicion._max.posicion ?? 0) + 1;
 
-              await tx.listaEspera.create({
-                data: {
-                  usuarioId: pagoActual.usuarioId,
-                  claseId: claseDelMes.id,
-                  posicion: proximaPosicion,
-                },
-              });
+            await tx.listaEspera.create({
+              data: {
+                usuarioId: pagoActual.usuarioId,
+                claseId: claseDelMes.id,
+                pagoId: pagoActual.id,
+                tipo: "ABONADO",
+                prioridad: 1,
+                posicion: proximaPosicion,
+              },
+            });
             }
 
             continue;
