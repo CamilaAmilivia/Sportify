@@ -12,27 +12,43 @@ export function BotonEscanearCliente({
   inicioVentana: string;
   finVentana: string;
 }) {
-  const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState("");
   const [mostrarScanner, setMostrarScanner] = useState(false);
 
+  const ahora = new Date();
   const inicio = new Date(inicioVentana);
   const fin = new Date(finVentana);
 
+  if (ahora < inicio) {
+    return (
+      <span
+        style={{
+          fontSize: "0.85rem",
+          color: "#6B7280",
+          fontStyle: "italic",
+        }}
+      >
+        La asistencia aún no abrió
+      </span>
+    );
+  }
+
+  if (ahora > fin) {
+    return (
+      <span
+        style={{
+          fontSize: "0.85rem",
+          color: "#6B7280",
+          fontStyle: "italic",
+        }}
+      >
+        Asistencia cerrada
+      </span>
+    );
+  }
+
   const manejarClick = async () => {
-    const ahoraActual = new Date();
-
-    if (ahoraActual < inicio) {
-      setError("No es posible registrar su asistencia antes de horario");
-      setTimeout(() => setError(""), 4000);
-      return;
-    }
-    if (ahoraActual > fin) {
-      setError("Ya cerró la asistencia para esta clase");
-      setTimeout(() => setError(""), 4000);
-      return;
-    }
-
     // Verificar si la asistencia ya fue registrada
     setCargando(true);
     try {
@@ -74,8 +90,10 @@ export function BotonEscanearCliente({
             gap: 6,
             opacity: cargando ? 0.7 : 1,
           }}
-          onMouseOver={(e) => { if (!cargando) e.currentTarget.style.opacity = "0.9"; }}
+          onMouseOver={(e) => { if (!cargando) e.currentTarget.style.opacity = "0.85"; }}
           onMouseOut={(e) => { if (!cargando) e.currentTarget.style.opacity = "1"; }}
+          onTouchStart={(e) => { if (!cargando) e.currentTarget.style.opacity = "0.85"; }}
+          onTouchEnd={(e) => { e.currentTarget.style.opacity = "1"; }}
         >
           <span>{cargando ? "⏳" : "📷"}</span>
           {cargando ? "Verificando..." : "Escanear asistencia"}
