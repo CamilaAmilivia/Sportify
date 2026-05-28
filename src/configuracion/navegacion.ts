@@ -13,7 +13,6 @@ export const navegacionPorRol: Record<RolUsuario, ItemNavegacion[]> = {
         { nombre: "Clases", href: "/plataforma/clases", icono: "▣" },
         { nombre: "Profesores", href: "/plataforma/profesores", icono: "👥" },
         { nombre: "Usuarios", href: "/plataforma/usuarios", icono: "👤" },
-        { nombre: "Asistencia", href: "/plataforma/asistencia", icono: "▤" },
     ],
 
     CLIENTE: [
@@ -24,7 +23,6 @@ export const navegacionPorRol: Record<RolUsuario, ItemNavegacion[]> = {
     PROFESOR: [
         { nombre: "Cronograma", href: "/plataforma/cronograma", icono: "▣" },
         { nombre: "Mis Clases", href: "/plataforma/mis-clases", icono: "▤" },
-        { nombre: "Asistencia", href: "/plataforma/asistencia", icono: "▣" },
     ],
 };
 

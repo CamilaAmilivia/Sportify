@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { BotonAsistencia } from "./BotonAsistencia";
 
 export const metadata = {
   title: "Mis clases — Sportify",
@@ -115,12 +116,12 @@ export default async function PaginaMisClases() {
         >
           <TarjetaEstadistica
             titulo="Inscripciones activas"
-            valor={inscripcionesActivas}
+            valor={String(inscripcionesActivas)}
             icono="▣"
           />
           <TarjetaEstadistica
             titulo="En lista de espera"
-            valor={enListaEspera}
+            valor={String(enListaEspera)}
             icono="⏳"
           />
           <TarjetaEstadistica
@@ -130,7 +131,7 @@ export default async function PaginaMisClases() {
           />
           <TarjetaEstadistica
             titulo="Ausencias (30 días)"
-            valor={ausencias}
+            valor={String(ausencias)}
             icono="⚠️"
           />
         </section>
@@ -231,10 +232,17 @@ export default async function PaginaMisClases() {
   }
 
   if (usuario.rol === "PROFESOR") {
+    const hoyInicio = new Date(ahora);
+    hoyInicio.setHours(0, 0, 0, 0);
+
+    const sieteDiasAdelante = new Date(ahora);
+    sieteDiasAdelante.setDate(sieteDiasAdelante.getDate() + 7);
+    sieteDiasAdelante.setHours(23, 59, 59, 999);
+
     const proximas = await prisma.clase.findMany({
       where: {
         profesorId: usuario.id,
-        fechaHora: { gt: limiteInferior },
+        fechaHora: { gte: hoyInicio, lte: sieteDiasAdelante },
         estado: "ACTIVA",
       },
       orderBy: { fechaHora: "asc" },
@@ -249,8 +257,8 @@ export default async function PaginaMisClases() {
     return (
       <>
         <TituloPagina
-          titulo="Mis clases a dictar"
-          descripcion="Revisá tu agenda y los inscriptos para tus próximas clases."
+          titulo="Mis clases"
+          descripcion="Revisá tu agenda y tomá asistencia de tus clases."
         />
 
         <div style={{ marginTop: 24 }}>
@@ -269,53 +277,74 @@ export default async function PaginaMisClases() {
             </p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {proximas.map((clase) => (
-                <div
-                  key={clase.id}
-                  style={{
-                    background: "white",
-                    border: "1px solid rgba(0,0,0,0.08)",
-                    borderRadius: 12,
-                    padding: "16px 20px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div>
-                    <h3 style={{ margin: "0 0 4px", fontSize: "1.1rem" }}>
-                      {clase.disciplina.nombre}
-                    </h3>
-                    <p
+              {proximas.map((clase) => {
+                const inicioVentana = new Date(
+                  clase.fechaHora.getTime() - 10 * 60000
+                );
+                const finVentana = new Date(
+                  clase.fechaHora.getTime() + (clase.duracionMin + 30) * 60000
+                );
+
+                return (
+                  <div
+                    key={clase.id}
+                    style={{
+                      background: "white",
+                      border: "1px solid rgba(0,0,0,0.08)",
+                      borderRadius: 12,
+                      padding: "16px 20px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div>
+                      <h3 style={{ margin: "0 0 4px", fontSize: "1.1rem" }}>
+                        {clase.disciplina.nombre}
+                      </h3>
+                      <p
+                        style={{
+                          margin: 0,
+                          color: "var(--color-gray)",
+                          fontSize: "0.9rem",
+                          textTransform: "capitalize",
+                          marginBottom: 8,
+                        }}
+                      >
+                        {format(clase.fechaHora, "EEEE d 'de' MMMM, HH:mm", {
+                          locale: es,
+                        })}{" "}
+                        hs
+                      </p>
+                      <span
+                        style={{
+                          background: "rgba(34, 197, 94, 0.1)",
+                          color: "#16a34a",
+                          padding: "4px 12px",
+                          borderRadius: 20,
+                          fontSize: "0.85rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {clase._count.inscripciones} inscriptos
+                      </span>
+                    </div>
+                    <div
                       style={{
-                        margin: 0,
-                        color: "var(--color-gray)",
-                        fontSize: "0.9rem",
-                        textTransform: "capitalize",
+                        textAlign: "right",
+                        display: "flex",
+                        alignItems: "center",
                       }}
                     >
-                      {format(clase.fechaHora, "EEEE d 'de' MMMM, HH:mm", {
-                        locale: es,
-                      })}{" "}
-                      hs
-                    </p>
+                      <BotonAsistencia
+                        claseId={clase.id}
+                        inicioVentana={inicioVentana.toISOString()}
+                        finVentana={finVentana.toISOString()}
+                      />
+                    </div>
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <span
-                      style={{
-                        background: "rgba(34, 197, 94, 0.1)",
-                        color: "#16a34a",
-                        padding: "4px 12px",
-                        borderRadius: 20,
-                        fontSize: "0.85rem",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {clase._count.inscripciones} inscriptos
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
