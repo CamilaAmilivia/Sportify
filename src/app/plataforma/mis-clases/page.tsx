@@ -77,11 +77,14 @@ export default async function PaginaMisClases() {
       },
     });
 
+    const hoyInicio = new Date(ahora);
+    hoyInicio.setHours(0, 0, 0, 0);
+
     const proximas7Dias = await prisma.inscripcion.findMany({
       where: {
         usuarioId: usuario.id,
         estado: "ACTIVA",
-        clase: { fechaHora: { gt: limiteInferior, lte: sieteDias }, estado: "ACTIVA" },
+        clase: { fechaHora: { gte: hoyInicio, lte: sieteDias }, estado: "ACTIVA" },
       },
       orderBy: { clase: { fechaHora: "asc" } },
       include: { clase: { include: { disciplina: true } } },
@@ -437,6 +440,7 @@ function ClaseListItem({
             finVentana={finVentana}
           />
         )}
+
       </div>
     </div>
   );

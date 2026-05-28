@@ -87,6 +87,35 @@ export default async function EscanearPage({
       );
     }
 
+    // Verificar si la asistencia ya fue registrada previamente
+    const asistenciaExistente = await prisma.asistencia.findUnique({
+      where: {
+        usuarioId_claseId: {
+          usuarioId: usuario.id,
+          claseId: claseId,
+        },
+      },
+    });
+
+    if (asistenciaExistente?.presente) {
+      return (
+        <>
+          <TituloPagina titulo="Ya registrado" descripcion="Tu asistencia ya fue registrada" />
+          <div style={{ color: "#92400e", background: "#fffbeb", padding: 24, borderRadius: 8, border: "1px solid #fde68a", textAlign: "center" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+            <h2 style={{ fontSize: 24, marginBottom: 8 }}>Asistencia ya registrada</h2>
+            <p>
+              Tu asistencia a <strong>{clase.titulo}</strong> ya fue registrada anteriormente. No hace falta volver a escanear.
+            </p>
+          </div>
+          <br />
+          <Link href="/plataforma/mis-clases" style={{ color: "#22c55e", fontWeight: "bold" }}>
+            Volver a mis clases
+          </Link>
+        </>
+      );
+    }
+
     // Registrar Asistencia
     await prisma.asistencia.upsert({
       where: {
