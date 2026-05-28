@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { BotonAsistencia } from "./BotonAsistencia";
+import { BotonEscanearCliente } from "./BotonEscanearCliente";
 
 export const metadata = {
   title: "Mis clases — Sportify",
@@ -179,6 +180,8 @@ export default async function PaginaMisClases() {
                     titulo={insc.clase.disciplina.nombre}
                     fechaHora={insc.clase.fechaHora}
                     estado="Confirmada"
+                    claseId={insc.clase.id}
+                    duracionMin={insc.clase.duracionMin}
                   />
                 ))}
               </div>
@@ -359,11 +362,20 @@ function ClaseListItem({
   titulo,
   fechaHora,
   estado,
+  claseId,
+  duracionMin,
 }: {
   titulo: string;
   fechaHora: Date;
   estado: string;
+  claseId?: number;
+  duracionMin?: number;
 }) {
+  let inicioVentana, finVentana;
+  if (claseId && duracionMin !== undefined) {
+    inicioVentana = new Date(fechaHora.getTime() - 10 * 60000).toISOString();
+    finVentana = new Date(fechaHora.getTime() + (duracionMin + 30) * 60000).toISOString();
+  }
   return (
     <div
       style={{
@@ -390,21 +402,30 @@ function ClaseListItem({
           {format(fechaHora, "EEEE d, HH:mm", { locale: es })} hs
         </p>
       </div>
-      <div
-        style={{
-          background:
-            estado === "Confirmada"
-              ? "rgba(34, 197, 94, 0.1)"
-              : "rgba(234, 179, 8, 0.1)",
-          color: estado === "Confirmada" ? "#16a34a" : "#ca8a04",
-          padding: "4px 10px",
-          borderRadius: 8,
-          fontSize: "0.8rem",
-          fontWeight: 600,
-          whiteSpace: "nowrap",
-        }}
-      >
-        {estado}
+      <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+        <div
+          style={{
+            background:
+              estado === "Confirmada"
+                ? "rgba(34, 197, 94, 0.1)"
+                : "rgba(234, 179, 8, 0.1)",
+            color: estado === "Confirmada" ? "#16a34a" : "#ca8a04",
+            padding: "4px 10px",
+            borderRadius: 8,
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {estado}
+        </div>
+        {claseId && inicioVentana && finVentana && estado === "Confirmada" && (
+          <BotonEscanearCliente
+            claseId={claseId}
+            inicioVentana={inicioVentana}
+            finVentana={finVentana}
+          />
+        )}
       </div>
     </div>
   );
