@@ -45,7 +45,7 @@ export async function iniciarSesion(
     if (!cliente) {
       return {
         errores: {
-          general: ["Credenciales incorrectas. Verificá tu email y contraseña."],
+          general: ["Credenciales incorrectas."],
         },
       };
     }
@@ -54,7 +54,7 @@ export async function iniciarSesion(
     if (cliente.password !== password) {
       return {
         errores: {
-          general: ["Credenciales incorrectas. Verificá tu email y contraseña."],
+          general: ["Credenciales incorrectas."],
         },
       };
     }
