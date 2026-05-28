@@ -21,10 +21,20 @@ npm install
 
 **2. Crear el archivo de entorno**
 
-Crear un archivo `.env` y definir la ruta de la base de datos:
+Crear un archivo `.env` en la raíz del proyecto con las siguientes variables:
 
 ```env
+# Base de datos
 DATABASE_URL="file:./dev.db"
+
+# Dominio de ngrok para allowedDevOrigins en next.config.ts
+NGROK_HOST="<tu-subdominio>.ngrok-free.app"
+
+# URL pública de la aplicación (necesaria para los webhooks de MercadoPago)
+APP_URL="https://<tu-subdominio>.ngrok-free.app"
+
+# Credenciales de MercadoPago
+MERCADO_PAGO_ACCESS_TOKEN="APP_USR-..."
 ```
 
 **2.1 Instalar Prisma**
@@ -50,6 +60,36 @@ npm run dev
 ```
 
 Se despliega en [http://localhost:3000](http://localhost:3000).
+
+## MercadoPago y ngrok
+
+La API de MercadoPago requiere una URL pública para enviar notificaciones (webhooks). En desarrollo
+local se puede usar **ngrok** para exponer el servidor:
+
+**1. Iniciar el túnel con ngrok:**
+
+```bash
+ngrok http 3000
+```
+
+Ngrok asignará un subdominio aleatorio del tipo `<subdominio>.ngrok-free.app`.
+
+**2. Actualizar el `.env`** con ese dominio:
+
+```env
+APP_URL="https://<subdominio>.ngrok-free.app"
+NGROK_HOST="<subdominio>.ngrok-free.app"
+```
+
+**3. Reiniciar el servidor de desarrollo** para que `next.config.ts` tome el nuevo `NGROK_HOST`
+y permita las peticiones de Hot Module Replacement desde ese origen:
+
+```bash
+npm run dev
+```
+
+> **Nota:** El subdominio de ngrok cambia en cada sesión (salvo que tengas un plan de pago).
+> Hay que repetir los pasos 1–3 cada vez que se reinicie ngrok.
 
 ## Utilidades
 
