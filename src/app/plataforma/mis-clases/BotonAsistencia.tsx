@@ -14,27 +14,16 @@ export function BotonAsistencia({
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
-  const ahora = new Date();
   const inicio = new Date(inicioVentana);
   const fin = new Date(finVentana);
 
-  if (ahora > fin) {
-    return (
-      <span
-        style={{
-          color: "#9ca3af",
-          fontSize: "0.85rem",
-          fontWeight: 500,
-        }}
-      >
-        Cerró la asistencia para esta clase
-      </span>
-    );
-  }
-
   const manejarClick = () => {
-    if (new Date() < inicio) {
+    const ahoraActual = new Date();
+    if (ahoraActual < inicio) {
       setError("No es posible tomar asistencia fuera del horario");
+      setTimeout(() => setError(""), 4000);
+    } else if (ahoraActual > fin) {
+      setError("Cerró la asistencia para esta clase");
       setTimeout(() => setError(""), 4000);
     } else {
       setError("");

@@ -177,7 +177,8 @@ export default async function PaginaMisClases() {
                 {proximas7Dias.map((insc) => (
                   <ClaseListItem
                     key={insc.id}
-                    titulo={insc.clase.disciplina.nombre}
+                    titulo={insc.clase.titulo}
+                    disciplina={insc.clase.disciplina.nombre}
                     fechaHora={insc.clase.fechaHora}
                     estado="Confirmada"
                     claseId={insc.clase.id}
@@ -221,9 +222,11 @@ export default async function PaginaMisClases() {
                 {pendientes.map((espera) => (
                   <ClaseListItem
                     key={espera.id}
-                    titulo={espera.clase.disciplina.nombre}
+                    titulo={espera.clase.titulo}
+                    disciplina={espera.clase.disciplina.nombre}
                     fechaHora={espera.clase.fechaHora}
                     estado={`Posición ${espera.posicion}`}
+                    duracionMin={espera.clase.duracionMin}
                   />
                 ))}
               </div>
@@ -303,7 +306,7 @@ export default async function PaginaMisClases() {
                   >
                     <div>
                       <h3 style={{ margin: "0 0 4px", fontSize: "1.1rem" }}>
-                        {clase.disciplina.nombre}
+                        {clase.titulo} <span style={{ fontWeight: 400, color: "var(--color-gray)", fontSize: "0.95rem" }}>• {clase.disciplina.nombre}</span>
                       </h3>
                       <p
                         style={{
@@ -317,7 +320,7 @@ export default async function PaginaMisClases() {
                         {format(clase.fechaHora, "EEEE d 'de' MMMM, HH:mm", {
                           locale: es,
                         })}{" "}
-                        hs
+                        - {format(new Date(clase.fechaHora.getTime() + clase.duracionMin * 60000), "HH:mm")} hs
                       </p>
                       <span
                         style={{
@@ -360,18 +363,23 @@ export default async function PaginaMisClases() {
 
 function ClaseListItem({
   titulo,
+  disciplina,
   fechaHora,
   estado,
   claseId,
   duracionMin,
 }: {
   titulo: string;
+  disciplina: string;
   fechaHora: Date;
   estado: string;
   claseId?: number;
   duracionMin?: number;
 }) {
-  let inicioVentana, finVentana;
+  let inicioVentana, finVentana, finClase;
+  if (duracionMin !== undefined) {
+    finClase = new Date(fechaHora.getTime() + duracionMin * 60000);
+  }
   if (claseId && duracionMin !== undefined) {
     inicioVentana = new Date(fechaHora.getTime() - 10 * 60000).toISOString();
     finVentana = new Date(fechaHora.getTime() + (duracionMin + 30) * 60000).toISOString();
@@ -390,7 +398,9 @@ function ClaseListItem({
       }}
     >
       <div>
-        <h4 style={{ margin: "0 0 4px 0", fontSize: "1.05rem" }}>{titulo}</h4>
+        <h4 style={{ margin: "0 0 4px 0", fontSize: "1.05rem" }}>
+          {titulo} <span style={{ fontWeight: 400, color: "var(--color-gray)", fontSize: "0.9rem" }}>• {disciplina}</span>
+        </h4>
         <p
           style={{
             margin: 0,
@@ -399,7 +409,8 @@ function ClaseListItem({
             textTransform: "capitalize",
           }}
         >
-          {format(fechaHora, "EEEE d, HH:mm", { locale: es })} hs
+          {format(fechaHora, "EEEE d, HH:mm", { locale: es })}
+          {finClase ? ` - ${format(finClase, "HH:mm")} hs` : " hs"}
         </p>
       </div>
       <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
