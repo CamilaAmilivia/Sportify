@@ -8,9 +8,17 @@ import { FormularioCrearClase } from "@/components/ui/FormularioCrearClase";
 
 type GestionClasesProps = {
   disciplinas: Array<{ id: number; nombre: string }>;
+  profesores: Array<{
+    id: number;
+    nombre: string;
+    apellido: string;
+  }>;
 };
 
-export function GestionClases({ disciplinas }: GestionClasesProps) {
+export function GestionClases({
+  disciplinas,
+  profesores,
+}: GestionClasesProps) {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   return (
@@ -77,13 +85,14 @@ export function GestionClases({ disciplinas }: GestionClasesProps) {
 
       {mostrarFormulario && (
         <FormularioCrearClase
-          disciplinas={disciplinas}
-          onClose={() => setMostrarFormulario(false)}
-          onSuccess={() => {
-            setMostrarFormulario(false);
-            window.location.reload();
-          }}
-        />
+  disciplinas={disciplinas}
+  profesores={profesores}
+  onClose={() => setMostrarFormulario(false)}
+  onSuccess={() => {
+    setMostrarFormulario(false);
+    window.location.reload();
+  }}
+/>
       )}
     </>
   );

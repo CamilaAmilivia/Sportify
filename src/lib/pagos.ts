@@ -26,3 +26,23 @@ export function esMismoDiaYHorario(fechaBase: Date, fechaComparar: Date) {
     fechaBase.getMinutes() === fechaComparar.getMinutes()
   );
 }
+
+export function obtenerInicioDeMes(fecha: Date) {
+  return new Date(fecha.getFullYear(), fecha.getMonth(), 1, 0, 0, 0);
+}
+
+export function calcularPrecioAbonoProporcional({
+  precioMensual,
+  totalClasesDelMes,
+  clasesRestantesDelMes,
+}: {
+  precioMensual: number;
+  totalClasesDelMes: number;
+  clasesRestantesDelMes: number;
+}) {
+  if (totalClasesDelMes <= 0 || clasesRestantesDelMes <= 0) {
+    return precioMensual;
+  }
+
+  return Math.round((precioMensual / totalClasesDelMes) * clasesRestantesDelMes);
+}

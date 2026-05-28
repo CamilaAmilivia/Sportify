@@ -1,7 +1,7 @@
 // Al inicio de CalendarioSemanal.tsx, antes del primer import de react
 'use client'
 
-
+import { useRouter } from 'next/navigation'
 import { useState, useMemo } from 'react'
 import { format, startOfWeek, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -136,16 +136,16 @@ interface TarjetaActividadProps {
   onClick: (a: Actividad) => void
 }
 
-function TarjetaActividad({ actividad, onClick }: TarjetaActividadProps) {
+function TarjetaActividad({ actividad }: { actividad: Actividad }) {
   const c = colorDe(actividad.color)
   const lleno = actividad.inscriptos >= actividad.capacidadMaxima
   const pct = porcentajeLleno(actividad.inscriptos, actividad.capacidadMaxima)
 
   return (
-    <button
-      onClick={() => onClick(actividad)}
+    <Link
+      href={`/plataforma/cronograma?claseId=${actividad.id}`}
       className={`
-        w-full text-left rounded-lg border-l-4 p-3 mb-2 transition-all duration-150
+        block w-full text-left rounded-lg border-l-4 p-3 mb-2 transition-all duration-150
         hover:shadow-md hover:-translate-y-0.5 active:scale-95
         ${c.bg} ${c.borde}
         ${lleno ? 'opacity-70' : ''}
@@ -185,7 +185,7 @@ function TarjetaActividad({ actividad, onClick }: TarjetaActividadProps) {
           />
         </div>
       </div>
-    </button>
+    </Link>
   )
 }
 
@@ -286,8 +286,9 @@ interface CalendarioSemanalProps {
   actividades?: Actividad[]
 }
 
-export default function CalendarioSemanal({ actividades = ACTIVIDADES_EJEMPLO }: CalendarioSemanalProps) {
+export default function CalendarioSemanal({ actividades = [] }: CalendarioSemanalProps) {
   const [semanaBase, setSemanaBase] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const router = useRouter()
   const [actividadSeleccionada, setActividadSeleccionada] = useState<Actividad | null>(null)
   const [filtroDia, setFiltroDia] = useState<DiaSemana | 'Todos'>('Todos')
   const [filtroNombre, setFiltroNombre] = useState('')
@@ -310,9 +311,23 @@ export default function CalendarioSemanal({ actividades = ACTIVIDADES_EJEMPLO }:
   const actividadesPorDia = (dia: DiaSemana) =>
     actividadesFiltradas.filter((a) => a.dia === dia)
 
-  const irSemanaAnterior = () => setSemanaBase((d) => addDays(d, -7))
-  const irSemanaSiguiente = () => setSemanaBase((d) => addDays(d, 7))
-  const irHoy = () => setSemanaBase(startOfWeek(new Date(), { weekStartsOn: 1 }))
+const irSemanaAnterior = () => {
+  const nueva = addDays(semanaBase, -7)
+  setSemanaBase(nueva)
+  router.push(`/plataforma/cronograma?semana=${format(nueva, 'yyyy-MM-dd')}`)
+}
+
+const irSemanaSiguiente = () => {
+  const nueva = addDays(semanaBase, 7)
+  setSemanaBase(nueva)
+  router.push(`/plataforma/cronograma?semana=${format(nueva, 'yyyy-MM-dd')}`)
+}
+
+const irHoy = () => {
+  const nueva = startOfWeek(new Date(), { weekStartsOn: 1 })
+  setSemanaBase(nueva)
+  router.push(`/plataforma/cronograma`)
+}
 
   const hoy = format(new Date(), 'EEEE', { locale: es })
 
@@ -421,9 +436,8 @@ export default function CalendarioSemanal({ actividades = ACTIVIDADES_EJEMPLO }:
                   ) : (
                     items.map((act) => (
                       <TarjetaActividad
-                        key={act.id}
-                        actividad={act}
-                        onClick={setActividadSeleccionada}
+                      key={act.id}
+                      actividad={act}
                       />
                     ))
                   )}
