@@ -1,9 +1,8 @@
 import { requerirUsuarioActual } from "@/lib/sesion";
 import { ContenidoPlataforma } from "../../components/ContenidoPlataforma";
-import { PanelAdmin } from "../../components/admin/PanelAdmin"
-import { PanelCliente } from "../../components/cliente/PanelCliente"
-import { TituloPagina } from "../../components/ui/TituloPagina"
+import { PanelAdmin } from "../../components/admin/PanelAdmin";
 import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Plataforma — Sportify",
@@ -20,20 +19,14 @@ export default async function PaginaPlataforma() {
       select: { id: true, nombre: true },
       where: { activa: true },
     });
+  } else {
+    // Si no es ADMIN, la página de inicio de la plataforma es el cronograma
+    redirect("/plataforma/cronograma");
   }
 
   return (
     <ContenidoPlataforma>
-      {usuario.rol === "ADMIN" && <PanelAdmin disciplinas={disciplinas} />}
-
-      {usuario.rol === "CLIENTE" && <PanelCliente />}
-
-      {usuario.rol === "PROFESOR" && (
-        <TituloPagina
-          titulo="Panel del profesor"
-          descripcion="Desde acá vas a poder ver tus clases asignadas y tomar asistencia."
-        />
-      )}
+      <PanelAdmin disciplinas={disciplinas} />
     </ContenidoPlataforma>
   );
 }
