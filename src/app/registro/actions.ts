@@ -14,6 +14,13 @@ export type RegistroState = {
     fechaNac?: string[];
     aptoFisico?: string[];
   };
+  valores?: {
+    dni?: string;
+    nombre?: string;
+    apellido?: string;
+    email?: string;
+    fechaNac?: string;
+  };
   mensaje?: string;
   exito?: boolean;
 };
@@ -67,8 +74,10 @@ export async function registrarCliente(
     errores.aptoFisico = ["Debe adjuntar el certificado de aptitud física."];
   }
 
+  const valores: RegistroState["valores"] = { dni, nombre, apellido, email, fechaNac: fechaNacStr };
+
   if (Object.keys(errores).length > 0) {
-    return { errores };
+    return { errores, valores };
   }
 
   const dniNumero = Number(dni);
@@ -88,7 +97,7 @@ if (cantidadDni > 0) {
   if (emailExistente) errores.email = ["Este email ya está registrado."];
 
   if (Object.keys(errores).length > 0) {
-    return { errores };
+    return { errores, valores };
   }
 
   // Guardar archivo en public/uploads

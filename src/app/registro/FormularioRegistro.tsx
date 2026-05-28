@@ -58,6 +58,7 @@ export default function FormularioRegistro() {
           type="text"
           placeholder="Ej: 12345678"
           className="form-input"
+          defaultValue={state.valores?.dni ?? ""}
           required
         />
         {state.errores?.dni && (
@@ -77,6 +78,7 @@ export default function FormularioRegistro() {
             type="text"
             placeholder="Juan"
             className="form-input"
+            defaultValue={state.valores?.nombre ?? ""}
             required
           />
           {state.errores?.nombre && (
@@ -94,6 +96,7 @@ export default function FormularioRegistro() {
             type="text"
             placeholder="Pérez"
             className="form-input"
+            defaultValue={state.valores?.apellido ?? ""}
             required
           />
           {state.errores?.apellido && (
@@ -113,6 +116,7 @@ export default function FormularioRegistro() {
           type="email"
           placeholder="juan@mail.com"
           className="form-input"
+          defaultValue={state.valores?.email ?? ""}
           required
         />
         {state.errores?.email && (
@@ -120,7 +124,7 @@ export default function FormularioRegistro() {
         )}
       </div>
 
-      {/* Contraseña */}
+      {/* Contraseña — se vacía intencionalmente por seguridad */}
       <div className="form-field">
         <label htmlFor="password" className="form-label">
           Contraseña
@@ -149,6 +153,7 @@ export default function FormularioRegistro() {
           type="date"
           lang="es-AR"
           className="form-input"
+          defaultValue={state.valores?.fechaNac ?? ""}
           required
         />
         {state.errores?.fechaNac && (
