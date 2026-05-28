@@ -5,12 +5,18 @@ import { crearClase } from "@/app/plataforma/actions";
 
 type FormularioCrearClaseProps = {
   disciplinas: Array<{ id: number; nombre: string }>;
+  profesores: Array<{
+    id: number;
+    nombre: string;
+    apellido: string;
+  }>;
   onClose: () => void;
   onSuccess: () => void;
 };
 
 export function FormularioCrearClase({
   disciplinas,
+  profesores,
   onClose,
   onSuccess,
 }: FormularioCrearClaseProps) {
@@ -18,7 +24,7 @@ export function FormularioCrearClase({
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     titulo: "",
-    profesor: "",
+    profesorId: "",
     fechaHora: "",
     horaInicio: "10:00",
     horaFin: "11:00",
@@ -29,12 +35,46 @@ export function FormularioCrearClase({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === "disciplinaId" || name === "cupoMaximo" || name === "precio" 
-        ? parseFloat(value) 
-        : value,
-    }));
+    
+    // Validación especial para fecha en formato dd/mm/yyyy
+    if (name === "fechaHora") {
+      // Solo permitir dígitos y barras
+      const soloDigitos = value.replace(/[^\d/]/g, "");
+      
+      // Limitar a formato dd/mm/yyyy (10 caracteres)
+      if (soloDigitos.length <= 10) {
+        // Agregar barras automáticamente
+        let formattedDate = soloDigitos;
+        if (soloDigitos.length >= 2 && !soloDigitos.includes("/")) {
+          formattedDate = soloDigitos.slice(0, 2) + "/" + soloDigitos.slice(2);
+        }
+        if (soloDigitos.length >= 5 && soloDigitos.split("/").length === 1) {
+          formattedDate = soloDigitos.slice(0, 2) + "/" + soloDigitos.slice(2, 4) + "/" + soloDigitos.slice(4);
+        } else if (soloDigitos.length >= 4) {
+          const parts = soloDigitos.split("/");
+          if (parts.length === 2) {
+            formattedDate = parts[0] + "/" + parts[1].slice(0, 2);
+            if (parts[1].length > 2) {
+              formattedDate += "/" + parts[1].slice(2);
+            }
+          } else if (parts.length === 3) {
+            // Limitar año a 4 dígitos
+            formattedDate = parts[0] + "/" + parts[1] + "/" + parts[2].slice(0, 4);
+          }
+        }
+        setFormData((prev) => ({
+          ...prev,
+          [name]: formattedDate,
+        }));
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: name === "disciplinaId" || name === "profesorId" || name === "cupoMaximo" || name === "precio" 
+          ? parseFloat(value) 
+          : value,
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -42,7 +82,10 @@ export function FormularioCrearClase({
     setCargando(true);
     setError(null);
 
-    const result = await crearClase(formData);
+    const result = await crearClase({
+  ...formData,
+  profesorId: Number(formData.profesorId),
+});
 
     if (result.error) {
       setError(result.error);
@@ -67,7 +110,6 @@ export function FormularioCrearClase({
         justifyContent: "center",
         zIndex: 1000,
       }}
-      onClick={onClose}
     >
       <div
         style={{
@@ -149,22 +191,31 @@ export function FormularioCrearClase({
             >
               Profesor *
             </label>
-            <input
-              type="text"
-              name="profesor"
-              value={formData.profesor}
-              onChange={handleChange}
-              placeholder="Nombre del profesor"
-              required
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: "1px solid rgba(0,0,0,0.1)",
-                borderRadius: 8,
-                fontSize: "1rem",
-                boxSizing: "border-box",
-              }}
-            />
+            <select
+  name="profesorId"
+  value={formData.profesorId}
+  onChange={handleChange}
+  required
+  style={{
+    width: "100%",
+    padding: "10px 12px",
+    border: "1px solid rgba(0,0,0,0.1)",
+    borderRadius: 8,
+    fontSize: "1rem",
+    boxSizing: "border-box",
+  }}
+>
+  <option value="">Seleccionar profesor</option>
+
+  {profesores.map((profesor) => (
+    <option
+      key={profesor.id}
+      value={profesor.id}
+    >
+      {profesor.nombre} {profesor.apellido}
+    </option>
+  ))}
+</select>
           </div>
 
           <div>
@@ -208,13 +259,15 @@ export function FormularioCrearClase({
                 color: "var(--color-dark)",
               }}
             >
-              Fecha *
+              Fecha (DD/MM/YYYY) *
             </label>
             <input
-              type="date"
+              type="text"
               name="fechaHora"
               value={formData.fechaHora}
               onChange={handleChange}
+              placeholder="dd/mm/yyyy"
+              maxLength={10}
               required
               style={{
                 width: "100%",

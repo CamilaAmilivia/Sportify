@@ -176,6 +176,28 @@ async function main() {
     },
   });
 
+  const profesor2 = await prisma.usuario.upsert({
+  where: {
+    email: "maria@sportify.com",
+  },
+  update: {
+    password: "Profesor123!",
+    rol: "PROFESOR",
+    activo: true,
+  },
+  create: {
+    dni: 33333333,
+    nombre: "María",
+    apellido: "Pérez",
+    email: "maria@sportify.com",
+    password: "Profesor123!",
+    fechaNac: new Date("1992-08-20"),
+    aptoFisico: null,
+    rol: "PROFESOR",
+    activo: true,
+  },
+});
+
   const cliente = await prisma.usuario.upsert({
     where: {
       email: "cliente@sportify.com",
@@ -240,16 +262,16 @@ async function main() {
     },
   });
 
-  const spinning = await prisma.disciplina.upsert({
+  const pilates = await prisma.disciplina.upsert({
     where: {
-      nombre: "Spinning",
+      nombre: "Pilates",
     },
     update: {
       activa: true,
     },
     create: {
-      nombre: "Spinning",
-      descripcion: "Clase de bicicleta fija.",
+      nombre: "Pilates",
+      descripcion: "Clase de pilates.",
       activa: true,
     },
   });
@@ -327,13 +349,13 @@ async function main() {
   });
 
   await crearClaseSiNoExiste({
-    titulo: "Spinning Intensivo",
-    descripcion: "Clase intensiva de bicicleta fija.",
+    titulo: "Pilates intermedio",
+    descripcion: "Clase de pilates para todas las edades.",
     fechaHora: new Date("2026-06-02T19:00:00"),
     duracionMin: 45,
     cupoMaximo: 12,
     precio: 5000,
-    disciplinaId: spinning.id,
+    disciplinaId: pilates.id,
     profesorId: profesor.id,
   });
 
