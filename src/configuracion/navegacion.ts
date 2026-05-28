@@ -17,12 +17,12 @@ export const navegacionPorRol: Record<RolUsuario, ItemNavegacion[]> = {
 
     CLIENTE: [
         { nombre: "Cronograma", href: "/plataforma/cronograma", icono: "▣" },
-        { nombre: "Mis Clases", href: "/plataforma/mis-clases", icono: "▤" },
+        { nombre: "Mis clases", href: "/plataforma/mis-clases", icono: "▤" },
     ],
 
     PROFESOR: [
         { nombre: "Cronograma", href: "/plataforma/cronograma", icono: "▣" },
-        { nombre: "Mis Clases", href: "/plataforma/mis-clases", icono: "▤" },
+        { nombre: "Mis clases", href: "/plataforma/mis-clases", icono: "▤" },
     ],
 };
 
