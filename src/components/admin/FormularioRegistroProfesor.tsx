@@ -46,7 +46,13 @@ export function FormularioRegistroProfesor({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (mensajeExito) setMensajeExito(null);
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    let value = e.target.value;
+    if (e.target.name === "dni") {
+      value = value.replace(/[^0-9]/g, "");
+      if (value.startsWith("0")) value = value.replace(/^0+/, "");
+      if (value.length > 8) value = value.slice(0, 8);
+    }
+    setFormData({ ...formData, [e.target.name]: value });
   };
 
   useEffect(() => {
@@ -202,6 +208,24 @@ export function FormularioRegistroProfesor({
               required
               value={formData.dni}
               onChange={handleChange}
+              maxLength={8}
+              onKeyDown={(e) => {
+                if (
+                  e.ctrlKey ||
+                  e.metaKey ||
+                  e.key.length > 1
+                ) {
+                  return;
+                }
+                if (!/^[0-9]$/.test(e.key)) {
+                  e.preventDefault();
+                  return;
+                }
+                const target = e.target as HTMLInputElement;
+                if (e.key === "0" && target.value.length === 0) {
+                  e.preventDefault();
+                }
+              }}
               style={{
                 width: "100%",
                 padding: "10px 12px",

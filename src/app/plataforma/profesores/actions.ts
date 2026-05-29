@@ -37,7 +37,11 @@ export async function registrarProfesor(
   const errores: RegistroProfesorState["errores"] = {};
 
   // Validaciones básicas
-  if (!dniStr) errores.dni = ["El DNI es requerido."];
+  if (!dniStr) {
+    errores.dni = ["El DNI es requerido."];
+  } else if (!/^[1-9][0-9]{6,7}$/.test(dniStr)) {
+    errores.dni = ["Se debe ingresar un DNI con formato válido"];
+  }
   if (!nombre) errores.nombre = ["El nombre es requerido."];
   if (!apellido) errores.apellido = ["El apellido es requerido."];
   if (!email) errores.email = ["El email es requerido."];
@@ -49,10 +53,6 @@ export async function registrarProfesor(
 
   const dni = Number(dniStr);
   const fechaNac = new Date(fechaNacStr);
-
-  if (isNaN(dni) || dniStr.length < 7 || dniStr.length > 8) {
-    errores.dni = ["El DNI debe ser un número válido de 7 u 8 dígitos."];
-  }
 
   if (isNaN(fechaNac.getTime())) {
     errores.fechaNac = ["La fecha ingresada no es válida."];

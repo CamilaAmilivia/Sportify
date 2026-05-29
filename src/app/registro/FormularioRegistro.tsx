@@ -61,6 +61,30 @@ export default function FormularioRegistro() {
           className="form-input"
           defaultValue={state.valores?.dni ?? ""}
           required
+          maxLength={8}
+          onKeyDown={(e) => {
+            if (
+              e.ctrlKey ||
+              e.metaKey ||
+              e.key.length > 1
+            ) {
+              return;
+            }
+            if (!/^[0-9]$/.test(e.key)) {
+              e.preventDefault();
+              return;
+            }
+            const target = e.target as HTMLInputElement;
+            if (e.key === "0" && target.value.length === 0) {
+              e.preventDefault();
+            }
+          }}
+          onChange={(e) => {
+            let val = e.target.value.replace(/[^0-9]/g, "");
+            if (val.startsWith("0")) val = val.replace(/^0+/, "");
+            if (val.length > 8) val = val.slice(0, 8);
+            e.target.value = val;
+          }}
         />
         {state.errores?.dni && (
           <span className="form-error">⚠ {state.errores.dni[0]}</span>

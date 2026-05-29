@@ -50,7 +50,11 @@ export async function registrarCliente(
   const errores: RegistroState["errores"] = {};
 
   // Validaciones básicas
-  if (!dni) errores.dni = ["El DNI es requerido."];
+  if (!dni) {
+    errores.dni = ["El DNI es requerido."];
+  } else if (!/^[1-9][0-9]{6,7}$/.test(dni)) {
+    errores.dni = ["Se debe ingresar un DNI con formato válido"];
+  }
   if (!nombre) errores.nombre = ["El nombre es requerido."];
   if (!apellido) errores.apellido = ["El apellido es requerido."];
   if (!email) errores.email = ["El email es requerido."];
