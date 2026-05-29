@@ -132,7 +132,7 @@ export function GestionClases({
             cursor: "pointer",
           }}
         >
-          ➕ Crear nueva clase
+          ➕ Crear clase
         </button>
       </div>
 
@@ -254,7 +254,7 @@ export function GestionClases({
                     <td style={{ padding: "16px 20px", color: "var(--color-dark)", fontWeight: 500 }}>
                       {clase.profesor.nombre} {clase.profesor.apellido}
                     </td>
-                    <td style={{ padding: "16px 20px", color: "var(--color-dark)", textTransform: "capitalize", fontWeight: 500 }}>
+                    <td style={{ padding: "16px 20px", color: "var(--color-dark)", fontWeight: 500 }}>
                       {formatearFecha(clase.fechaHora)}
                     </td>
                     <td style={{ padding: "16px 20px", color: "var(--color-dark)" }}>

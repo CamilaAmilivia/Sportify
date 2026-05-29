@@ -123,7 +123,7 @@ export function FormularioCrearClase({
             marginBottom: 24,
           }}
         >
-          Crear nueva clase
+          Crear clase
         </h2>
 
         {errores.general && (

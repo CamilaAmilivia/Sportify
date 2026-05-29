@@ -60,7 +60,7 @@ export default async function PaginaProfesores() {
                     <td style={{ padding: "16px 20px", color: "var(--color-dark)", fontWeight: 500 }}>
                       {profesor.email}
                     </td>
-                    <td style={{ padding: "16px 20px", color: "var(--color-dark)", textTransform: "capitalize", fontWeight: 500 }}>
+                    <td style={{ padding: "16px 20px", color: "var(--color-dark)", fontWeight: 500 }}>
                       {profesor.fechaNac 
                         ? new Date(profesor.fechaNac).toLocaleDateString("es-AR", { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }) 
                         : "No especificada"}
