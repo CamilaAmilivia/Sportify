@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { PanelConstruccion } from "@/components/ui/PanelConstruccion"
-import { TarjetaAccion } from "@/components/ui/TarjetaAccion"
 import { TituloPagina } from "@/components/ui/TituloPagina";
 import { FormularioCrearClase } from "@/components/ui/FormularioCrearClase";
 
@@ -55,28 +54,6 @@ export function GestionClases({
         </button>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: 20,
-          marginBottom: 32,
-        }}
-      >
-        <TarjetaAccion
-          titulo="Ver cronograma"
-          descripcion="Consultar las clases cargadas por fecha y disciplina."
-          href="#"
-          icono="▣"
-        />
-
-        <TarjetaAccion
-          titulo="Clases canceladas"
-          descripcion="Revisar clases canceladas o finalizadas."
-          href="#"
-          icono="⚠️"
-        />
-      </div>
 
       <PanelConstruccion
         titulo="Listado de clases"
