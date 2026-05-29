@@ -200,7 +200,7 @@ export function FormularioRegistroProfesor({
                 color: "var(--color-dark)",
               }}
             >
-              DNI (sin puntos) *
+              DNI *
             </label>
             <input
               type="text"
