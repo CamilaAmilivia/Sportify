@@ -12,6 +12,13 @@ export type RegistroProfesorState = {
     email?: string[];
     fechaNac?: string[];
   };
+  valores?: {
+    dni?: string;
+    nombre?: string;
+    apellido?: string;
+    email?: string;
+    fechaNac?: string;
+  };
   mensaje?: string;
   exito?: boolean;
 };
@@ -26,6 +33,7 @@ export async function registrarProfesor(
   const email = (formData.get("email") as string)?.trim();
   const fechaNacStr = formData.get("fechaNac") as string;
 
+  const valores = { dni: dniStr, nombre, apellido, email, fechaNac: fechaNacStr };
   const errores: RegistroProfesorState["errores"] = {};
 
   // Validaciones básicas
@@ -36,7 +44,7 @@ export async function registrarProfesor(
   if (!fechaNacStr) errores.fechaNac = ["La fecha de nacimiento es requerida."];
 
   if (Object.keys(errores).length > 0) {
-    return { errores };
+    return { errores, valores };
   }
 
   const dni = Number(dniStr);
@@ -64,7 +72,7 @@ export async function registrarProfesor(
   }
 
   if (Object.keys(errores).length > 0) {
-    return { errores };
+    return { errores, valores };
   }
 
   // Verificar si existe el DNI o Email
@@ -81,7 +89,7 @@ export async function registrarProfesor(
   }
 
   if (Object.keys(errores).length > 0) {
-    return { errores };
+    return { errores, valores };
   }
 
   try {

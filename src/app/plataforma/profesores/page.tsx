@@ -1,6 +1,6 @@
 import { requerirRol } from "@/lib/sesion";
 import { TituloPagina } from "@/components/ui/TituloPagina";
-import Link from "next/link";
+import { BotonRegistrarProfesor } from "@/components/admin/BotonRegistrarProfesor";
 import { prisma } from "@/lib/prisma";
 
 export const metadata = {
@@ -26,23 +26,7 @@ export default async function PaginaProfesores() {
       />
 
       <div style={{ marginBottom: "40px" }}>
-        <Link
-          href="/plataforma/profesores/registrar"
-          style={{
-            display: "inline-block",
-            padding: "16px 24px",
-            background: "#22c55e",
-            color: "white",
-            border: "none",
-            borderRadius: 8,
-            fontSize: "1rem",
-            fontWeight: 600,
-            cursor: "pointer",
-            textDecoration: "none",
-          }}
-        >
-          ➕ Registrar profesor
-        </Link>
+        <BotonRegistrarProfesor />
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
