@@ -13,7 +13,7 @@ export const metadata = {
 export default async function PaginaLogin() {
   const cookieStore = await cookies();
   if (cookieStore.has("sportify_session")) {
-    redirect("/plataforma");
+    redirect("/plataforma/cronograma");
   }
 
   return (

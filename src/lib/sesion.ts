@@ -41,7 +41,7 @@ export async function requerirRol( rolesPermitidos: RolUsuario[]): Promise<Usuar
     const usuario = await requerirUsuarioActual();
 
     if (!rolesPermitidos.includes(usuario.rol)) {
-        redirect("/plataforma");
+        redirect("/plataforma/cronograma");
     }
 
     return usuario;
