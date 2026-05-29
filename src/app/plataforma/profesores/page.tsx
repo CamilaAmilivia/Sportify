@@ -1,7 +1,7 @@
 import { requerirRol } from "@/lib/sesion";
 import { TituloPagina } from "@/components/ui/TituloPagina";
 import { PanelConstruccion } from "@/components/ui/PanelConstruccion";
-import { TarjetaAccion } from "@/components/ui/TarjetaAccion";
+import Link from "next/link";
 
 export const metadata = {
   title: "Profesores — Sportify",
@@ -19,25 +19,27 @@ export default async function PaginaProfesores() {
 
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: 20,
           marginBottom: 32,
         }}
       >
-        <TarjetaAccion
-          titulo="Registrar profesor"
-          descripcion="Crear un nuevo usuario con rol profesor."
+        <Link
           href="/plataforma/profesores/registrar"
-          icono="🧑‍🏫"
-        />
-
-        <TarjetaAccion
-          titulo="Asignar clases"
-          descripcion="Vincular profesores con clases existentes."
-          href="#"
-          icono="▣"
-        />
+          style={{
+            display: "inline-block",
+            padding: "20px 24px",
+            background: "#22c55e",
+            color: "white",
+            border: "none",
+            borderRadius: 8,
+            fontSize: "1rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            marginBottom: 20,
+            textDecoration: "none",
+          }}
+        >
+          ➕ Registrar profesor
+        </Link>
       </div>
 
       <PanelConstruccion
