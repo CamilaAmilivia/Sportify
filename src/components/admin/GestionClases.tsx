@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { PanelConstruccion } from "@/components/ui/PanelConstruccion"
 import { TituloPagina } from "@/components/ui/TituloPagina";
 import { FormularioCrearClase } from "@/components/ui/FormularioCrearClase";
@@ -20,6 +21,7 @@ export function GestionClases({
   profesores,
 }: GestionClasesProps) {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const router = useRouter();
 
   return (
     <>
@@ -67,8 +69,7 @@ export function GestionClases({
           profesores={profesores}
           onClose={() => setMostrarFormulario(false)}
           onSuccess={() => {
-            setMostrarFormulario(false);
-            window.location.reload();
+            router.refresh();
           }}
         />
       )}

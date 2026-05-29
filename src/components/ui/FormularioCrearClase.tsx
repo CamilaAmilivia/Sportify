@@ -23,6 +23,7 @@ export function FormularioCrearClase({
 }: FormularioCrearClaseProps) {
   const [cargando, setCargando] = useState(false);
   const [errores, setErrores] = useState<CrearClaseErrores>({});
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     titulo: "",
     profesorId: "",
@@ -35,8 +36,9 @@ export function FormularioCrearClase({
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (mensajeExito) setMensajeExito(null);
     const { name, value } = e.target;
-    
+
     // No validation for date needed, it uses type="date"
     if (name === "horaInicio" || name === "horaFin") {
       const soloDigitos = value.replace(/[^\d]/g, "");
@@ -53,8 +55,8 @@ export function FormularioCrearClase({
     } else {
       setFormData((prev) => ({
         ...prev,
-        [name]: name === "disciplinaId" || name === "profesorId" || name === "cupoMaximo" || name === "precio" 
-          ? parseFloat(value) 
+        [name]: name === "disciplinaId" || name === "profesorId" || name === "cupoMaximo" || name === "precio"
+          ? parseFloat(value)
           : value,
       }));
     }
@@ -70,15 +72,18 @@ export function FormularioCrearClase({
       profesorId: Number(formData.profesorId),
     });
 
-    if (result.errores) {
-      setErrores(result.errores);
+    if (result.success) {
+      const partesFecha = formData.fechaHora.split("-");
+      const fechaFormateada = partesFecha.length === 3 ? `${partesFecha[2]}/${partesFecha[1]}/${partesFecha[0]}` : formData.fechaHora;
+      setMensajeExito(`Se creó la clase ${formData.titulo} para el ${fechaFormateada} en el horario ${formData.horaInicio} a ${formData.horaFin}`);
+      onSuccess();
+      setCargando(false);
+    } else if (result.errores) {
+      setErrores(result.errores as CrearClaseErrores);
       setCargando(false);
     } else if (result.error) {
       setErrores({ general: [result.error] });
       setCargando(false);
-    } else {
-      onSuccess();
-      onClose();
     }
   };
 
@@ -181,30 +186,30 @@ export function FormularioCrearClase({
               Profesor *
             </label>
             <select
-  name="profesorId"
-  value={formData.profesorId}
-  onChange={handleChange}
-  required
-  style={{
-    width: "100%",
-    padding: "10px 12px",
-    border: "1px solid rgba(0,0,0,0.1)",
-    borderRadius: 8,
-    fontSize: "1rem",
-    boxSizing: "border-box",
-  }}
->
-  <option value="">Seleccionar profesor</option>
+              name="profesorId"
+              value={formData.profesorId}
+              onChange={handleChange}
+              required
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                border: "1px solid rgba(0,0,0,0.1)",
+                borderRadius: 8,
+                fontSize: "1rem",
+                boxSizing: "border-box",
+              }}
+            >
+              <option value="">Seleccionar profesor</option>
 
-  {profesores.map((profesor) => (
-    <option
-      key={profesor.id}
-      value={profesor.id}
-    >
-      {profesor.nombre} {profesor.apellido} (DNI: {profesor.dni})
-    </option>
-  ))}
-</select>
+              {profesores.map((profesor) => (
+                <option
+                  key={profesor.id}
+                  value={profesor.id}
+                >
+                  {profesor.nombre} {profesor.apellido} (DNI: {profesor.dni})
+                </option>
+              ))}
+            </select>
             {errores.profesorId && (
               <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.profesorId[0]}</span>
             )}
@@ -434,10 +439,70 @@ export function FormularioCrearClase({
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
-            <button
-              type="button"
-              onClick={onClose}
+          <div style={{ position: "relative" }}>
+            {mensajeExito && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "100%",
+                  right: 0,
+                  marginBottom: "12px",
+                  background: "#dcfce7",
+                  color: "#166534",
+                  padding: "12px 32px 12px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid #bbf7d0",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  fontSize: "0.95rem",
+                  fontWeight: 500,
+                  zIndex: 10,
+                  width: "max-content",
+                  maxWidth: "100%",
+                  lineHeight: 1.4,
+                  textAlign: "left",
+                }}
+              >
+                {mensajeExito}
+                <button
+                  type="button"
+                  onClick={() => setMensajeExito(null)}
+                  style={{
+                    position: "absolute",
+                    top: "4px",
+                    right: "4px",
+                    background: "transparent",
+                    border: "none",
+                    color: "#166534",
+                    cursor: "pointer",
+                    padding: "4px",
+                    lineHeight: 1,
+                    fontSize: "1.2rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  ×
+                </button>
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: "-6px",
+                    right: "25%",
+                    width: "12px",
+                    height: "12px",
+                    background: "#dcfce7",
+                    borderBottom: "1px solid #bbf7d0",
+                    borderRight: "1px solid #bbf7d0",
+                    transform: "rotate(45deg)",
+                  }}
+                />
+              </div>
+            )}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={onClose}
               disabled={cargando}
               style={{
                 padding: "12px 16px",
@@ -469,6 +534,7 @@ export function FormularioCrearClase({
             >
               {cargando ? "Creando..." : "Confirmar"}
             </button>
+            </div>
           </div>
         </form>
       </div>
