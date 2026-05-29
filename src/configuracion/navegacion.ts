@@ -11,7 +11,6 @@ export const navegacionPorRol: Record<RolUsuario, ItemNavegacion[]> = {
         { nombre: "Cronograma", href: "/plataforma/cronograma", icono: "▣" },
         { nombre: "Clases", href: "/plataforma/clases", icono: "▣" },
         { nombre: "Profesores", href: "/plataforma/profesores", icono: "👥" },
-        { nombre: "Usuarios", href: "/plataforma/usuarios", icono: "👤" },
     ],
 
     CLIENTE: [
