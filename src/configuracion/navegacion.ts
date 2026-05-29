@@ -9,7 +9,6 @@ export type ItemNavegacion = {
 export const navegacionPorRol: Record<RolUsuario, ItemNavegacion[]> = {
     ADMIN: [
         { nombre: "Cronograma", href: "/plataforma/cronograma", icono: "▣" },
-        { nombre: "Dashboard", href: "/plataforma", icono: "⌁" },
         { nombre: "Clases", href: "/plataforma/clases", icono: "▣" },
         { nombre: "Profesores", href: "/plataforma/profesores", icono: "👥" },
         { nombre: "Usuarios", href: "/plataforma/usuarios", icono: "👤" },
