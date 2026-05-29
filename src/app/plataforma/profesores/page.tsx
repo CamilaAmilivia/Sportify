@@ -14,7 +14,6 @@ export default async function PaginaProfesores() {
     <>
       <TituloPagina
         titulo="Gestión de profesores"
-        descripcion="Desde acá el administrador va a poder registrar profesores y asignarlos a clases."
       />
 
       <div

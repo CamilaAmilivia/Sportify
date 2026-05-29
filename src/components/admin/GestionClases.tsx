@@ -115,7 +115,6 @@ export function GestionClases({
     <>
       <TituloPagina
         titulo="Gestión de clases"
-        descripcion="Desde acá el administrador va a poder crear, editar, cancelar y consultar clases."
       />
 
       <div style={{ marginBottom: "40px" }}>
