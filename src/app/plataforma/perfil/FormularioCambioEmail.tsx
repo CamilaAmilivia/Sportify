@@ -14,10 +14,10 @@ export default function FormularioCambioEmail() {
   return (
     <div className="mt-8 border-t border-gray-200 pt-8 relative">
       <h3 className="text-xl font-bold text-gray-900 mb-4">
-        Cambiar Dirección de Correo Electrónico
+        Cambiar dirección de correo electrónico
       </h3>
       <p className="text-sm text-gray-500 mb-6">
-        Por razones de seguridad, deberás ingresar tu contraseña actual. Al confirmar el cambio, se cerrará tu sesión actual y deberás iniciar sesión nuevamente con tu nuevo correo.
+        Al confirmar el cambio, se cerrará tu sesión actual y deberás iniciar sesión nuevamente con tu nuevo correo.
       </p>
 
       <form
@@ -34,7 +34,7 @@ export default function FormularioCambioEmail() {
 
         <div className="space-y-1">
           <label htmlFor="nuevoEmail" className="block text-sm font-semibold text-gray-700">
-            Nuevo Correo Electrónico
+            Nuevo correo electrónico
           </label>
           <input
             id="nuevoEmail"
@@ -52,7 +52,7 @@ export default function FormularioCambioEmail() {
 
         <div className="space-y-1">
           <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
-            Contraseña Actual
+            Contraseña actual
           </label>
           <input
             id="password"
@@ -73,7 +73,7 @@ export default function FormularioCambioEmail() {
           disabled={isPending}
           className="mt-4 w-full bg-green-500 text-white font-bold py-2 px-4 rounded-md hover:bg-green-600 transition-colors disabled:opacity-50"
         >
-          {isPending ? "Procesando..." : "Cambiar Correo"}
+          {isPending ? "Procesando..." : "Cambiar correo"}
         </button>
       </form>
     </div>
