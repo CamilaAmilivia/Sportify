@@ -24,7 +24,7 @@ export function GestionClases({
   return (
     <>
       <TituloPagina
-        titulo="Gestión de Clases"
+        titulo="Gestión de clases"
         descripcion="Desde acá el administrador va a poder crear, editar, cancelar y consultar clases."
       />
 
@@ -51,7 +51,7 @@ export function GestionClases({
             marginBottom: 20,
           }}
         >
-          ➕ Crear Nueva Clase
+          ➕ Crear nueva clase
         </button>
       </div>
 
@@ -85,14 +85,14 @@ export function GestionClases({
 
       {mostrarFormulario && (
         <FormularioCrearClase
-  disciplinas={disciplinas}
-  profesores={profesores}
-  onClose={() => setMostrarFormulario(false)}
-  onSuccess={() => {
-    setMostrarFormulario(false);
-    window.location.reload();
-  }}
-/>
+          disciplinas={disciplinas}
+          profesores={profesores}
+          onClose={() => setMostrarFormulario(false)}
+          onSuccess={() => {
+            setMostrarFormulario(false);
+            window.location.reload();
+          }}
+        />
       )}
     </>
   );
