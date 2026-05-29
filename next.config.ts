@@ -19,6 +19,11 @@ const NGROK_HOST = process.env.NGROK_HOST;
 
 const nextConfig: NextConfig = {
   /* config options here */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "250mb",
+    },
+  },
   allowedDevOrigins: [...getLocalIPs(), NGROK_HOST],
 };
 

@@ -72,6 +72,16 @@ export async function registrarCliente(
   // Validar archivo apto físico
   if (!archivo || archivo.size === 0) {
     errores.aptoFisico = ["Debe adjuntar el certificado de aptitud física."];
+  } else {
+    const mimetypesPermitidos = ["application/pdf", "image/jpeg", "image/png"];
+    const extensionesPermitidas = [".pdf", ".jpg", ".jpeg", ".png"];
+    const ext = path.extname(archivo.name).toLowerCase();
+
+    if (!mimetypesPermitidos.includes(archivo.type)) {
+      errores.aptoFisico = ["Formato de archivo no válido. Solo se permiten PDF, JPG o PNG."];
+    } else if (!extensionesPermitidas.includes(ext)) {
+      errores.aptoFisico = ["La extensión del archivo no es válida. Solo se permiten .pdf, .jpg, .jpeg o .png."];
+    }
   }
 
   const valores: RegistroState["valores"] = { dni, nombre, apellido, email, fechaNac: fechaNacStr };
