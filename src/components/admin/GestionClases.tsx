@@ -107,8 +107,8 @@ export function GestionClases({
     const inicio = new Date(fechaString);
     const fin = new Date(inicio.getTime() + duracion * 60000);
     
-    const options: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
-    return `${inicio.toLocaleTimeString("es-AR", options)} - ${fin.toLocaleTimeString("es-AR", options)}`;
+    const options: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
+    return `${inicio.toLocaleTimeString("es-AR", options)} a ${fin.toLocaleTimeString("es-AR", options)} h`;
   };
 
   return (
