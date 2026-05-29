@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { crearClase } from "@/app/plataforma/actions";
+import { crearClase, CrearClaseErrores } from "@/app/plataforma/actions";
 
 type FormularioCrearClaseProps = {
   disciplinas: Array<{ id: number; nombre: string }>;
@@ -9,6 +9,7 @@ type FormularioCrearClaseProps = {
     id: number;
     nombre: string;
     apellido: string;
+    dni: number;
   }>;
   onClose: () => void;
   onSuccess: () => void;
@@ -21,7 +22,7 @@ export function FormularioCrearClase({
   onSuccess,
 }: FormularioCrearClaseProps) {
   const [cargando, setCargando] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errores, setErrores] = useState<CrearClaseErrores>({});
   const [formData, setFormData] = useState({
     titulo: "",
     profesorId: "",
@@ -30,41 +31,23 @@ export function FormularioCrearClase({
     horaFin: "11:00",
     disciplinaId: disciplinas[0]?.id || 1,
     cupoMaximo: 20,
-    precio: 0,
+    precio: "" as unknown as number,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    // Validación especial para fecha en formato dd/mm/yyyy
-    if (name === "fechaHora") {
-      // Solo permitir dígitos y barras
-      const soloDigitos = value.replace(/[^\d/]/g, "");
-      
-      // Limitar a formato dd/mm/yyyy (10 caracteres)
-      if (soloDigitos.length <= 10) {
-        // Agregar barras automáticamente
-        let formattedDate = soloDigitos;
-        if (soloDigitos.length >= 2 && !soloDigitos.includes("/")) {
-          formattedDate = soloDigitos.slice(0, 2) + "/" + soloDigitos.slice(2);
-        }
-        if (soloDigitos.length >= 5 && soloDigitos.split("/").length === 1) {
-          formattedDate = soloDigitos.slice(0, 2) + "/" + soloDigitos.slice(2, 4) + "/" + soloDigitos.slice(4);
-        } else if (soloDigitos.length >= 4) {
-          const parts = soloDigitos.split("/");
-          if (parts.length === 2) {
-            formattedDate = parts[0] + "/" + parts[1].slice(0, 2);
-            if (parts[1].length > 2) {
-              formattedDate += "/" + parts[1].slice(2);
-            }
-          } else if (parts.length === 3) {
-            // Limitar año a 4 dígitos
-            formattedDate = parts[0] + "/" + parts[1] + "/" + parts[2].slice(0, 4);
-          }
+    // No validation for date needed, it uses type="date"
+    if (name === "horaInicio" || name === "horaFin") {
+      const soloDigitos = value.replace(/[^\d]/g, "");
+      if (soloDigitos.length <= 4) {
+        let formattedTime = soloDigitos;
+        if (soloDigitos.length >= 3) {
+          formattedTime = soloDigitos.slice(0, 2) + ":" + soloDigitos.slice(2);
         }
         setFormData((prev) => ({
           ...prev,
-          [name]: formattedDate,
+          [name]: formattedTime,
         }));
       }
     } else {
@@ -80,15 +63,18 @@ export function FormularioCrearClase({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setCargando(true);
-    setError(null);
+    setErrores({});
 
     const result = await crearClase({
-  ...formData,
-  profesorId: Number(formData.profesorId),
-});
+      ...formData,
+      profesorId: Number(formData.profesorId),
+    });
 
-    if (result.error) {
-      setError(result.error);
+    if (result.errores) {
+      setErrores(result.errores);
+      setCargando(false);
+    } else if (result.error) {
+      setErrores({ general: [result.error] });
       setCargando(false);
     } else {
       onSuccess();
@@ -132,10 +118,10 @@ export function FormularioCrearClase({
             marginBottom: 24,
           }}
         >
-          Crear Nueva Clase
+          Crear nueva clase
         </h2>
 
-        {error && (
+        {errores.general && (
           <div
             style={{
               background: "#fee2e2",
@@ -146,7 +132,7 @@ export function FormularioCrearClase({
               fontSize: "0.95rem",
             }}
           >
-            {error}
+            {errores.general[0]}
           </div>
         )}
 
@@ -178,6 +164,9 @@ export function FormularioCrearClase({
                 boxSizing: "border-box",
               }}
             />
+            {errores.titulo && (
+              <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.titulo[0]}</span>
+            )}
           </div>
 
           <div>
@@ -212,10 +201,13 @@ export function FormularioCrearClase({
       key={profesor.id}
       value={profesor.id}
     >
-      {profesor.nombre} {profesor.apellido}
+      {profesor.nombre} {profesor.apellido} (DNI: {profesor.dni})
     </option>
   ))}
 </select>
+            {errores.profesorId && (
+              <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.profesorId[0]}</span>
+            )}
           </div>
 
           <div>
@@ -248,6 +240,9 @@ export function FormularioCrearClase({
                 </option>
               ))}
             </select>
+            {errores.disciplinaId && (
+              <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.disciplinaId[0]}</span>
+            )}
           </div>
 
           <div>
@@ -259,15 +254,14 @@ export function FormularioCrearClase({
                 color: "var(--color-dark)",
               }}
             >
-              Fecha (DD/MM/YYYY) *
+              Fecha *
             </label>
             <input
-              type="text"
+              type="date"
               name="fechaHora"
               value={formData.fechaHora}
               onChange={handleChange}
-              placeholder="dd/mm/yyyy"
-              maxLength={10}
+              lang="es-AR"
               required
               style={{
                 width: "100%",
@@ -278,6 +272,9 @@ export function FormularioCrearClase({
                 boxSizing: "border-box",
               }}
             />
+            {errores.fechaHora && (
+              <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.fechaHora[0]}</span>
+            )}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -294,10 +291,14 @@ export function FormularioCrearClase({
                 Hora inicio *
               </label>
               <input
-                type="time"
+                type="text"
                 name="horaInicio"
                 value={formData.horaInicio}
                 onChange={handleChange}
+                placeholder="HH:MM"
+                maxLength={5}
+                pattern="^([01]\d|2[0-3]):([0-5]\d)$"
+                title="Formato de 24 horas (ej. 14:30)"
                 required
                 style={{
                   width: "100%",
@@ -308,6 +309,9 @@ export function FormularioCrearClase({
                   boxSizing: "border-box",
                 }}
               />
+              {errores.horaInicio && (
+                <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.horaInicio[0]}</span>
+              )}
             </div>
 
             <div>
@@ -323,10 +327,14 @@ export function FormularioCrearClase({
                 Hora fin *
               </label>
               <input
-                type="time"
+                type="text"
                 name="horaFin"
                 value={formData.horaFin}
                 onChange={handleChange}
+                placeholder="HH:MM"
+                maxLength={5}
+                pattern="^([01]\d|2[0-3]):([0-5]\d)$"
+                title="Formato de 24 horas (ej. 14:30)"
                 required
                 style={{
                   width: "100%",
@@ -337,6 +345,9 @@ export function FormularioCrearClase({
                   boxSizing: "border-box",
                 }}
               />
+              {errores.horaFin && (
+                <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.horaFin[0]}</span>
+              )}
             </div>
           </div>
 
@@ -369,6 +380,9 @@ export function FormularioCrearClase({
                   boxSizing: "border-box",
                 }}
               />
+              {errores.cupoMaximo && (
+                <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.cupoMaximo[0]}</span>
+              )}
             </div>
 
             <div>
@@ -383,22 +397,40 @@ export function FormularioCrearClase({
               >
                 Precio
               </label>
-              <input
-                type="number"
-                name="precio"
-                value={formData.precio}
-                onChange={handleChange}
-                min="0"
-                step="0.01"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                  borderRadius: 8,
-                  fontSize: "1rem",
-                  boxSizing: "border-box",
-                }}
-              />
+              <div style={{ position: "relative" }}>
+                <span
+                  style={{
+                    position: "absolute",
+                    left: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "var(--color-gray)",
+                    fontSize: "1rem",
+                  }}
+                >
+                  $
+                </span>
+                <input
+                  type="number"
+                  name="precio"
+                  value={formData.precio}
+                  onChange={handleChange}
+                  min="1"
+                  step="0.01"
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px 10px 28px",
+                    border: "1px solid rgba(0,0,0,0.1)",
+                    borderRadius: 8,
+                    fontSize: "1rem",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              {errores.precio && (
+                <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.precio[0]}</span>
+              )}
             </div>
           </div>
 

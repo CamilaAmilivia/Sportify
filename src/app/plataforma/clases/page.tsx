@@ -21,6 +21,7 @@ export default async function PaginaClases() {
     id: true,
     nombre: true,
     apellido: true,
+    dni: true,
   },
 });
 
