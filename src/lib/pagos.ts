@@ -5,7 +5,7 @@ export const TIPOS_PAGO = {
 
 export type TipoPagoSportify = (typeof TIPOS_PAGO)[keyof typeof TIPOS_PAGO];
 
-export const PRECIO_ABONO_MENSUAL = 15000;
+export const PRECIO_ABONO_MENSUAL = 100;
 
 export function normalizarTipoPago(tipoPago: unknown): TipoPagoSportify {
   if (tipoPago === TIPOS_PAGO.MENSUALIDAD) {
