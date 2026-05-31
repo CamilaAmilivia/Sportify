@@ -46,7 +46,12 @@ export function BotonPagarMercadoPago({
         return;
       }
 
-      window.location.href = data.initPoint;
+    window.open(
+  data.initPoint,
+  "_blank",
+  "noopener,noreferrer"
+);
+
     } catch (error) {
       console.error("Error iniciando pago:", error);
       setError("Error al iniciar el pago");

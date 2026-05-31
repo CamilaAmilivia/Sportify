@@ -204,9 +204,9 @@ export async function POST(request: Request) {
         external_reference: pago.externalReference ?? undefined,
         notification_url: `${process.env.APP_URL}/api/mercado-pago/webhook`,
         back_urls: {
-          success: `${process.env.APP_URL}/plataforma/pagos/resultado?resultado=success&pagoId=${pago.id}`,
-          failure: `${process.env.APP_URL}/plataforma/pagos/resultado?resultado=failure&pagoId=${pago.id}`,
-          pending: `${process.env.APP_URL}/plataforma/pagos/resultado?resultado=pending&pagoId=${pago.id}`,
+          success: `${process.env.APP_URL}/pagos/resultado?resultado=success&pagoId=${pago.id}`,
+          failure: `${process.env.APP_URL}/pagos/resultado?resultado=failure&pagoId=${pago.id}`,
+          pending: `${process.env.APP_URL}/pagos/resultado?resultado=pending&pagoId=${pago.id}`,
         },
         auto_return: "approved",
       },

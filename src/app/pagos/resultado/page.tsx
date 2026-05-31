@@ -149,19 +149,6 @@ export default async function PaginaResultadoPago({
           </p>
         </>
       )}
-
-      <Link
-        href="/plataforma/cronograma"
-        style={{
-          display: "inline-block",
-          marginTop: 24,
-          color: "#16a34a",
-          fontWeight: 700,
-          textDecoration: "none",
-        }}
-      >
-        Volver al cronograma
-      </Link>
     </section>
   );
 }
