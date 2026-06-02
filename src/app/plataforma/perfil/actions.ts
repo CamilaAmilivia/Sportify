@@ -8,6 +8,7 @@ import { obtenerUsuarioActual } from "@/lib/sesion";
 export type CambioEmailState = {
   errores?: {
     email?: string[];
+    confirmarEmail?: string[];
     password?: string[];
     general?: string[];
   };
@@ -20,6 +21,7 @@ export async function cambiarEmail(
   formData: FormData
 ): Promise<CambioEmailState> {
   const nuevoEmail = (formData.get("nuevoEmail") as string)?.trim();
+  const confirmarEmail = (formData.get("confirmarEmail") as string)?.trim();
   const password = formData.get("password") as string;
 
   const errores: CambioEmailState["errores"] = {};
@@ -28,6 +30,12 @@ export async function cambiarEmail(
     errores.email = ["El nuevo correo es requerido."];
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nuevoEmail)) {
     errores.email = ["El formato del correo es inválido."];
+  }
+
+  if (!confirmarEmail) {
+    errores.confirmarEmail = ["Debe confirmar el nuevo correo."];
+  } else if (nuevoEmail !== confirmarEmail) {
+    errores.confirmarEmail = ["Los correos no coinciden."];
   }
 
   if (!password) {
