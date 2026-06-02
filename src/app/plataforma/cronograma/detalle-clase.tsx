@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { requerirUsuarioActual } from "@/lib/sesion";
 
 type DetalleClaseProps = {
   claseId: number;
 };
 
 export async function DetalleClase({ claseId }: DetalleClaseProps) {
+  const usuario = await requerirUsuarioActual();
+
   const clase = await prisma.clase.findUnique({
     where: {
       id: claseId,
@@ -137,6 +140,11 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
             <br />
             {clase.profesor.nombre} {clase.profesor.apellido}
           </p>
+
+          <p>
+            <strong>Precio clase individual</strong>
+            <br />${clase.precio.toLocaleString("es-AR")}
+          </p>
         </div>
 
         <div style={{ marginTop: 32 }}>
@@ -168,23 +176,25 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
             : `✓ Hay ${disponibles} cupos disponibles`}
         </div>
 
-        <Link
-          href={`/plataforma/cronograma?claseId=${clase.id}&vista=resumen`}
-          style={{
-            display: "block",
-            textAlign: "center",
-            marginTop: 24,
-            borderRadius: 10,
-            padding: "14px 16px",
-            background: sinCupo ? "#9ca3af" : "#22c55e",
-            color: "white",
-            fontWeight: 700,
-            textDecoration: "none",
-            pointerEvents: sinCupo ? "none" : "auto",
-          }}
-        >
-          Inscribirme
-        </Link>
+        {usuario.rol === "CLIENTE" && (
+          <Link
+            href={`/plataforma/cronograma?claseId=${clase.id}&vista=resumen&tipoPago=CLASE_INDIVIDUAL`}
+            style={{
+              display: "block",
+              textAlign: "center",
+              marginTop: 24,
+              borderRadius: 10,
+              padding: "14px 16px",
+              background: sinCupo ? "#9ca3af" : "#22c55e",
+              color: "white",
+              fontWeight: 700,
+              textDecoration: "none",
+              pointerEvents: sinCupo ? "none" : "auto",
+            }}
+          >
+            Inscribirme
+          </Link>
+        )}
       </section>
     </>
   );

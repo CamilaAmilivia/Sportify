@@ -45,7 +45,7 @@ export async function iniciarSesion(
     if (!cliente) {
       return {
         errores: {
-          general: ["Credenciales incorrectas. Verificá tu email y contraseña."],
+          general: ["Credenciales incorrectas."],
         },
       };
     }
@@ -54,7 +54,7 @@ export async function iniciarSesion(
     if (cliente.password !== password) {
       return {
         errores: {
-          general: ["Credenciales incorrectas. Verificá tu email y contraseña."],
+          general: ["Credenciales incorrectas."],
         },
       };
     }
@@ -68,11 +68,7 @@ export async function iniciarSesion(
       maxAge: 60 * 60 * 24 * 7, // 7 días
     });
 
-    if (cliente.rol === "ADMIN") {
-      redirectUrl = "/plataforma";
-    } else {
-      redirectUrl = "/plataforma/cronograma";
-    }
+    redirectUrl = "/plataforma/cronograma";
   } catch (error) {
     console.error("Error al iniciar sesión:", error);
     return {

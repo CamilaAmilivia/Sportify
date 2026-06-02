@@ -36,6 +36,11 @@ enum TipoPago {
   CLASE_INDIVIDUAL
 }
 
+enum TipoListaEspera {
+  ABONADO
+  CLASE_INDIVIDUAL
+}
+
 model Usuario {
   id         Int       @id @default(autoincrement())
   dni        Int       @unique
@@ -73,7 +78,7 @@ model Clase {
   descripcion String?
   fechaHora   DateTime
   duracionMin Int
-  cupoMaximo  Int
+  cupoMaximo  Int        @default(1)
   precio      Float      @default(0)
   estado      EstadoClase @default(ACTIVA)
   createdAt   DateTime    @default(now())
@@ -111,6 +116,8 @@ model Inscripcion {
 model ListaEspera {
   id        Int      @id @default(autoincrement())
   posicion  Int
+  tipo      TipoListaEspera @default(CLASE_INDIVIDUAL)
+  prioridad Int      @default(0)
   createdAt DateTime @default(now())
 
   usuarioId Int
@@ -119,7 +126,13 @@ model ListaEspera {
   claseId Int
   clase   Clase @relation(fields: [claseId], references: [id])
 
+  pagoId Int?
+  pago   Pago? @relation(fields: [pagoId], references: [id])
+
   @@unique([usuarioId, claseId])
+  @@index([claseId])
+  @@index([tipo])
+  @@index([prioridad])
 }
 
 model Asistencia {
@@ -157,6 +170,7 @@ model Pago {
   clase   Clase? @relation(fields: [claseId], references: [id])
 
   inscripciones Inscripcion[]
+  listaEspera   ListaEspera[]
 
   @@index([usuarioId])
   @@index([claseId])

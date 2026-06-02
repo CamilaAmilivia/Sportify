@@ -14,9 +14,17 @@ function getLocalIPs() {
   return ips;
 }
 
+// Dominio público asignado por ngrok — definir NGROK_HOST en .env
+const NGROK_HOST = process.env.NGROK_HOST;
+
 const nextConfig: NextConfig = {
   /* config options here */
-  allowedDevOrigins: getLocalIPs(),
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "250mb",
+    },
+  },
+  allowedDevOrigins: [...getLocalIPs(), NGROK_HOST],
 };
 
 export default nextConfig;

@@ -13,6 +13,22 @@ export default async function PaginaClases() {
     select: { id: true, nombre: true },
     where: { activa: true },
   });
+  const profesores = await prisma.usuario.findMany({
+  where: {
+    rol: "PROFESOR",
+  },
+  select: {
+    id: true,
+    nombre: true,
+    apellido: true,
+    dni: true,
+  },
+});
 
-  return <GestionClases disciplinas={disciplinas} />;
+  return (
+  <GestionClases
+    disciplinas={disciplinas}
+    profesores={profesores}
+  />
+);
 }

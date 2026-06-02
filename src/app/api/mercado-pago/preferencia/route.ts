@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { prisma } from "@/lib/prisma";
 import {
+  calcularPrecioAbonoProporcional,
+  esMismoDiaYHorario,
   normalizarTipoPago,
+  obtenerFinDeMes,
+  obtenerInicioDeMes,
   PRECIO_ABONO_MENSUAL,
   TIPOS_PAGO,
 } from "@/lib/pagos";
@@ -14,11 +18,6 @@ export async function POST(request: Request) {
     const claseId = Number(body.claseId);
     const usuarioId = Number(body.usuarioId);
     const tipoPago = normalizarTipoPago(body.tipoPago);
-
-    const montoPenalizacion =
-      tipoPago === TIPOS_PAGO.MENSUALIDAD
-        ? Math.max(0, Number(body.montoPenalizacion ?? 0))
-        : 0;
 
     if (!claseId || !usuarioId) {
       return NextResponse.json(
@@ -61,12 +60,40 @@ export async function POST(request: Request) {
       );
     }
 
-    const montoBase =
-      tipoPago === TIPOS_PAGO.MENSUALIDAD
-        ? PRECIO_ABONO_MENSUAL
-        : Number(clase.precio);
+    let montoAPagar = Number(clase.precio);
 
-    const montoAPagar = montoBase + montoPenalizacion;
+    if (tipoPago === TIPOS_PAGO.MENSUALIDAD) {
+      const inicioDeMes = obtenerInicioDeMes(clase.fechaHora);
+      const finDeMes = obtenerFinDeMes(clase.fechaHora);
+
+      const clasesDelMes = await prisma.clase.findMany({
+        where: {
+          estado: "ACTIVA",
+          disciplinaId: clase.disciplinaId,
+          fechaHora: {
+            gte: inicioDeMes,
+            lte: finDeMes,
+          },
+        },
+        orderBy: {
+          fechaHora: "asc",
+        },
+      });
+
+      const clasesMismoDiaYHorario = clasesDelMes.filter((claseDelMes) =>
+        esMismoDiaYHorario(clase.fechaHora, claseDelMes.fechaHora)
+      );
+
+      const clasesRestantesDelMes = clasesMismoDiaYHorario.filter(
+        (claseDelMes) => claseDelMes.fechaHora >= clase.fechaHora
+      );
+
+      montoAPagar = calcularPrecioAbonoProporcional({
+        precioMensual: PRECIO_ABONO_MENSUAL,
+        totalClasesDelMes: clasesMismoDiaYHorario.length,
+        clasesRestantesDelMes: clasesRestantesDelMes.length,
+      });
+    }
 
     if (montoAPagar <= 0) {
       return NextResponse.json(
@@ -88,7 +115,7 @@ export async function POST(request: Request) {
 
     if (yaInscripto) {
       return NextResponse.json(
-        { error: "El usuario ya está inscripto en esta clase" },
+        { error: "Ya estás inscripta en esta clase" },
         { status: 400 }
       );
     }
@@ -177,9 +204,9 @@ export async function POST(request: Request) {
         external_reference: pago.externalReference ?? undefined,
         notification_url: `${process.env.APP_URL}/api/mercado-pago/webhook`,
         back_urls: {
-          success: `${process.env.APP_URL}/plataforma/pagos/resultado?resultado=success`,
-          failure: `${process.env.APP_URL}/plataforma/pagos/resultado?resultado=failure`,
-          pending: `${process.env.APP_URL}/plataforma/pagos/resultado?resultado=pending`,
+          success: `${process.env.APP_URL}/pagos/resultado?resultado=success&pagoId=${pago.id}`,
+          failure: `${process.env.APP_URL}/pagos/resultado?resultado=failure&pagoId=${pago.id}`,
+          pending: `${process.env.APP_URL}/pagos/resultado?resultado=pending&pagoId=${pago.id}`,
         },
         auto_return: "approved",
       },
@@ -206,10 +233,20 @@ export async function POST(request: Request) {
       initPoint: resultado.init_point,
     });
   } catch (error) {
+    const detalle =
+      error instanceof Error
+        ? error.message
+        : typeof error === "object"
+          ? JSON.stringify(error)
+          : String(error);
+
     console.error("Error creando preferencia de Mercado Pago:", error);
 
     return NextResponse.json(
-      { error: "Error al iniciar el pago" },
+      {
+        error: "Error al iniciar el pago",
+        detalle,
+      },
       { status: 500 }
     );
   }

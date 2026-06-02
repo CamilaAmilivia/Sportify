@@ -42,15 +42,15 @@ export default async function PaginaPerfil() {
               <p className="text-gray-900 font-medium text-lg">{usuario.apellido}</p>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-semibold text-gray-500">Documento (DNI)</label>
+              <label className="text-sm font-semibold text-gray-500">DNI</label>
               <p className="text-gray-900 font-medium text-lg">{usuario.dni}</p>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-semibold text-gray-500">Correo Electrónico</label>
+              <label className="text-sm font-semibold text-gray-500">Correo electrónico</label>
               <p className="text-gray-900 font-medium text-lg">{usuario.email}</p>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-semibold text-gray-500">Fecha de Nacimiento</label>
+              <label className="text-sm font-semibold text-gray-500">Fecha de nacimiento</label>
               <p className="text-gray-900 font-medium text-lg">
                 {usuario.fechaNac ? new Date(usuario.fechaNac).toLocaleDateString("es-AR", { timeZone: "UTC" }) : "No especificada"}
               </p>

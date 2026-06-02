@@ -4,8 +4,14 @@ import { prisma } from '@/lib/prisma'
 import { startOfWeek, endOfWeek } from 'date-fns'
 
 export async function getClasesSemana(fecha: Date) {
-  const inicio = startOfWeek(fecha, { weekStartsOn: 1 })
-  const fin = endOfWeek(fecha, { weekStartsOn: 1 })
+const inicio = startOfWeek(fecha, { weekStartsOn: 1 })
+inicio.setUTCHours(0, 0, 0, 0)
+
+const fin = new Date(inicio)
+fin.setUTCDate(fin.getUTCDate() + 6)
+fin.setUTCHours(23, 59, 59, 999)
+
+// Ajuste zona horaria Argentina (UTC-3)
 
   const clases = await prisma.clase.findMany({
     where: {

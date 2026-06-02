@@ -1,1 +1,1 @@
-export const PRECIO_ABONO_MENSUAL = 15000;
+export const PRECIO_ABONO_MENSUAL = 1500;
