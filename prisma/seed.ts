@@ -221,7 +221,7 @@ async function main() {
   });
 
   const ocupante1 = await crearClienteOcupanteSiNoExiste({
-    dni: 33333333,
+    dni: 55555555,
     nombre: "Martina",
     apellido: "Pérez",
     email: "ocupante1@sportify.com",
@@ -276,88 +276,55 @@ async function main() {
     },
   });
 
-  await crearClaseSiNoExiste({
-    titulo: "Funcional - Turno Mañana",
-    descripcion: "Clase de entrenamiento funcional.",
-    fechaHora: new Date("2026-06-01T09:00:00"),
-    duracionMin: 60,
-    cupoMaximo: 10,
-    precio: 4500,
-    disciplinaId: funcional.id,
-    profesorId: profesor.id,
-  });
+// ==========================================
+// CLASE DEMO
+// ==========================================
 
-  await crearClaseSiNoExiste({
-    titulo: "Funcional - Turno Mañana",
-    descripcion: "Clase de entrenamiento funcional.",
-    fechaHora: new Date("2026-06-08T09:00:00"),
-    duracionMin: 60,
-    cupoMaximo: 10,
-    precio: 4500,
-    disciplinaId: funcional.id,
-    profesorId: profesor.id,
-  });
+await crearClaseSiNoExiste({
+  titulo: "Funcional",
+  descripcion: "Clase demo para presentación.",
+  fechaHora: new Date("2026-07-01T10:00:00"),
+  duracionMin: 60,
+  cupoMaximo: 10,
+  precio: 1000,
+  disciplinaId: funcional.id,
+  profesorId: profesor.id,
+});
 
-  const funcionalLunes15 = await crearClaseSiNoExiste({
-    titulo: "Funcional - Turno Mañana",
-    descripcion:
-      "Clase de entrenamiento funcional. Clase llena para probar lista de espera.",
-    fechaHora: new Date("2026-06-15T09:00:00"),
-    duracionMin: 60,
-    cupoMaximo: 2,
-    precio: 4500,
-    disciplinaId: funcional.id,
-    profesorId: profesor.id,
-  });
+// ==========================================
+// CLASE PARA PROBAR INSCRIPCIÓN / PAGO
+// ==========================================
 
-  await crearClaseSiNoExiste({
-    titulo: "Funcional - Turno Mañana",
-    descripcion: "Clase de entrenamiento funcional.",
-    fechaHora: new Date("2026-06-22T09:00:00"),
-    duracionMin: 60,
-    cupoMaximo: 10,
-    precio: 4500,
-    disciplinaId: funcional.id,
-    profesorId: profesor.id,
-  });
+await crearClaseSiNoExiste({
+  titulo: "Funcional Test Pago",
+  descripcion: "Clase para probar inscripción y pago.",
+  fechaHora: new Date("2026-07-03T10:00:00"),
+  duracionMin: 60,
+  cupoMaximo: 10,
+  precio: 2000,
+  disciplinaId: funcional.id,
+  profesorId: profesor.id,
+});
 
-  await crearClaseSiNoExiste({
-    titulo: "Funcional - Turno Mañana",
-    descripcion: "Clase de entrenamiento funcional.",
-    fechaHora: new Date("2026-06-29T09:00:00"),
-    duracionMin: 60,
-    cupoMaximo: 10,
-    precio: 4500,
-    disciplinaId: funcional.id,
-    profesorId: profesor.id,
-  });
+// ==========================================
+// CLASE LLENA PARA LISTA DE ESPERA
+// ==========================================
 
-  await ocuparClaseCompleta({
-    claseId: funcionalLunes15.id,
-    usuariosIds: [ocupante1.id, ocupante2.id],
-  });
+const claseListaEspera = await crearClaseSiNoExiste({
+  titulo: "Funcional Test Lista Espera",
+  descripcion: "Clase llena para probar lista de espera.",
+  fechaHora: new Date("2026-07-04T10:00:00"),
+  duracionMin: 60,
+  cupoMaximo: 2,
+  precio: 2000,
+  disciplinaId: funcional.id,
+  profesorId: profesor.id,
+});
 
-  await crearClaseSiNoExiste({
-    titulo: "Yoga Inicial",
-    descripcion: "Clase de yoga para principiantes.",
-    fechaHora: new Date("2026-06-01T18:00:00"),
-    duracionMin: 60,
-    cupoMaximo: 8,
-    precio: 4000,
-    disciplinaId: yoga.id,
-    profesorId: profesor.id,
-  });
-
-  await crearClaseSiNoExiste({
-    titulo: "Pilates intermedio",
-    descripcion: "Clase de pilates para todas las edades.",
-    fechaHora: new Date("2026-06-02T19:00:00"),
-    duracionMin: 45,
-    cupoMaximo: 12,
-    precio: 5000,
-    disciplinaId: pilates.id,
-    profesorId: profesor.id,
-  });
+await ocuparClaseCompleta({
+  claseId: claseListaEspera.id,
+  usuariosIds: [ocupante1.id, ocupante2.id],
+});
 
   console.log("Seed ejecutado correctamente.");
 
@@ -385,14 +352,8 @@ async function main() {
     rol: cliente.rol,
   });
 
-  console.log("Clase llena para probar lista de espera:");
-  console.log({
-    id: funcionalLunes15.id,
-    titulo: funcionalLunes15.titulo,
-    fechaHora: funcionalLunes15.fechaHora,
-    cupoMaximo: funcionalLunes15.cupoMaximo,
-    ocupantes: [ocupante1.email, ocupante2.email],
-  });
+
+
 }
 
 main()
