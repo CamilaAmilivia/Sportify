@@ -90,25 +90,26 @@ export async function registrarCliente(
 
   const valores: RegistroState["valores"] = { dni, nombre, apellido, email, fechaNac: fechaNacStr };
 
-  if (Object.keys(errores).length > 0) {
-    return { errores, valores };
+  // Verificar unicidad en la BD solo si no hay errores previos en esos campos
+  const promesasDb = [];
+
+  if (!errores.dni) {
+    promesasDb.push(
+      prisma.usuario.count({ where: { dni: Number(dni) } }).then((count) => {
+        if (count > 0) errores.dni = ["Ya existe un usuario registrado con ese DNI."];
+      })
+    );
   }
 
-  const dniNumero = Number(dni);
+  if (!errores.email) {
+    promesasDb.push(
+      prisma.usuario.findUnique({ where: { email } }).then((usuario) => {
+        if (usuario) errores.email = ["Este email ya está registrado."];
+      })
+    );
+  }
 
-  // Verificar unicidad de DNI y email en la BD
-  const [cantidadDni, emailExistente] = await Promise.all([
-    prisma.usuario.count({
-    where: {
-      dni: dniNumero,
-    },
-  }),
-    prisma.usuario.findUnique({ where: { email } }),
-  ]);
-if (cantidadDni > 0) {
-  errores.dni = ["Ya existe un usuario registrado con ese DNI."];
-}
-  if (emailExistente) errores.email = ["Este email ya está registrado."];
+  await Promise.all(promesasDb);
 
   if (Object.keys(errores).length > 0) {
     return { errores, valores };
@@ -128,7 +129,7 @@ if (cantidadDni > 0) {
   const fechaNac = new Date(fechaNacStr);
   await prisma.usuario.create({
     data: {
-      dni: dniNumero,
+      dni: Number(dni),
       nombre,
       apellido,
       email,

@@ -48,67 +48,87 @@ export async function crearClase(formData: {
       errores.precio = ["El precio debe ser mayor a 0"];
     }
 
-    if (Object.keys(errores).length > 0) return { errores };
-
-    // Buscar profesor por ID
-    const profesorEncontrado = await prisma.usuario.findUnique({
-      where: {
-        id: formData.profesorId,
-      },
-    });
-
-    if (!profesorEncontrado) {
-      errores.profesorId = [`Profesor con ID "${formData.profesorId}" no encontrado en el sistema`];
-    } else if (profesorEncontrado.rol !== "PROFESOR") {
-      errores.profesorId = ["El usuario seleccionado no es un profesor"];
+    if (!formData.disciplinaId || isNaN(formData.disciplinaId)) {
+      errores.disciplinaId = ["Debes seleccionar una disciplina"];
     }
 
-    // Combinar fecha e hora de inicio
-    const [horaInicioH, horaInicioM] = formData.horaInicio.split(":").map(Number);
-    const [horaFinH, horaFinM] = formData.horaFin.split(":").map(Number);
+    // Validar profesor solo si hay un ID válido
+    let profesorEncontrado = null;
+    if (!errores.profesorId) {
+      profesorEncontrado = await prisma.usuario.findUnique({
+        where: { id: formData.profesorId },
+      });
 
-    // Parsear fecha en formato yyyy-mm-dd
-    const [anio, mes, dia] = formData.fechaHora.split("-").map(Number);
+      if (!profesorEncontrado) {
+        errores.profesorId = [`Profesor con ID "${formData.profesorId}" no encontrado en el sistema`];
+      } else if (profesorEncontrado.rol !== "PROFESOR") {
+        errores.profesorId = ["El usuario seleccionado no es un profesor"];
+      }
+    }
+
+    // Validar disciplina solo si hay un ID válido
+    let disciplinaActual = null;
+    if (!errores.disciplinaId) {
+      disciplinaActual = await prisma.disciplina.findUnique({
+        where: { id: formData.disciplinaId },
+      });
+
+      if (!disciplinaActual) {
+        errores.disciplinaId = ["La disciplina seleccionada no existe"];
+      }
+    }
 
     let fechaInicio: Date | null = null;
     let fechaFin: Date | null = null;
     let duracionMin = 0;
+    let horaFinH = 0;
+    let horaFinM = 0;
+    let anio = 0;
+    let mes = 0;
+    let dia = 0;
 
-    if (!dia || !mes || !anio) {
-      errores.fechaHora = ["Fecha inválida"];
-    } else if (anio < 2000 || anio > 2099) {
-      errores.fechaHora = ["El año debe estar entre 2000 y 2099"];
-    } else if (mes < 1 || mes > 12) {
-      errores.fechaHora = ["El mes debe estar entre 01 y 12"];
-    } else {
-      const esBisiesto = (year: number) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-      const diasPorMes = [31, esBisiesto(anio) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-      const diasEnMes = diasPorMes[mes - 1];
+    // Procesar fecha y hora solo si los campos básicos están presentes
+    if (!errores.fechaHora && !errores.horaInicio && !errores.horaFin) {
+      const [horaInicioH, horaInicioM] = formData.horaInicio.split(":").map(Number);
+      [horaFinH, horaFinM] = formData.horaFin.split(":").map(Number);
+      [anio, mes, dia] = formData.fechaHora.split("-").map(Number);
 
-      if (dia < 1 || dia > diasEnMes) {
-        errores.fechaHora = [`El día debe estar entre 01 y ${diasEnMes}`];
+      if (!dia || !mes || !anio) {
+        errores.fechaHora = ["Fecha inválida"];
+      } else if (anio < 2000 || anio > 2099) {
+        errores.fechaHora = ["El año debe estar entre 2000 y 2099"];
+      } else if (mes < 1 || mes > 12) {
+        errores.fechaHora = ["El mes debe estar entre 01 y 12"];
       } else {
-        fechaInicio = new Date(anio, mes - 1, dia);
-        if (fechaInicio.getFullYear() !== anio || fechaInicio.getMonth() !== mes - 1 || fechaInicio.getDate() !== dia) {
-          errores.fechaHora = ["Fecha inválida"];
+        const esBisiesto = (year: number) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+        const diasPorMes = [31, esBisiesto(anio) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        const diasEnMes = diasPorMes[mes - 1];
+
+        if (dia < 1 || dia > diasEnMes) {
+          errores.fechaHora = [`El día debe estar entre 01 y ${diasEnMes}`];
         } else {
-          fechaInicio.setHours(horaInicioH, horaInicioM, 0, 0);
-          if (fechaInicio.getTime() <= Date.now()) {
-            errores.fechaHora = ["La fecha y hora no puede ser anterior al momento actual"];
-          }
+          fechaInicio = new Date(anio, mes - 1, dia);
+          if (fechaInicio.getFullYear() !== anio || fechaInicio.getMonth() !== mes - 1 || fechaInicio.getDate() !== dia) {
+            errores.fechaHora = ["Fecha inválida"];
+          } else {
+            fechaInicio.setHours(horaInicioH, horaInicioM, 0, 0);
+            if (fechaInicio.getTime() <= Date.now()) {
+              errores.fechaHora = ["La fecha y hora no puede ser anterior al momento actual"];
+            }
 
-          fechaFin = new Date(anio, mes - 1, dia);
-          fechaFin.setHours(horaFinH, horaFinM, 0, 0);
-          duracionMin = Math.round((fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60));
+            fechaFin = new Date(anio, mes - 1, dia);
+            fechaFin.setHours(horaFinH, horaFinM, 0, 0);
+            duracionMin = Math.round((fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60));
 
-          if (duracionMin <= 0) {
-            errores.horaFin = ["La hora de fin debe ser posterior a la hora de inicio"];
+            if (duracionMin <= 0) {
+              errores.horaFin = ["La hora de fin debe ser posterior a la hora de inicio"];
+            }
           }
         }
       }
     }
 
-    if (Object.keys(errores).length > 0 || !fechaInicio || !fechaFin || !profesorEncontrado) {
+    if (Object.keys(errores).length > 0 || !fechaInicio || !fechaFin || !profesorEncontrado || !disciplinaActual) {
       return { errores };
     }
 
@@ -145,14 +165,7 @@ export async function crearClase(formData: {
       clasesEnMismoHorario.map((c) => c.disciplina.nombre)
     );
 
-    // Obtener nombre de la disciplina que queremos agregar
-    const disciplinaActual = await prisma.disciplina.findUnique({
-      where: { id: formData.disciplinaId },
-    });
-
-    if (!disciplinaActual) {
-      errores.disciplinaId = ["La disciplina seleccionada no existe"];
-    } else if (disciplinasEnHorario.size >= 3 && !disciplinasEnHorario.has(disciplinaActual.nombre)) {
+    if (disciplinasEnHorario.size >= 3 && !disciplinasEnHorario.has(disciplinaActual.nombre)) {
       errores.disciplinaId = [
         `No se pueden agregar más de 3 disciplinas diferentes en el mismo horario. Actualmente hay: ${Array.from(disciplinasEnHorario).join(", ")}`,
       ];

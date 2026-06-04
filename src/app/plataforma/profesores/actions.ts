@@ -45,7 +45,48 @@ export async function registrarProfesor(
   if (!nombre) errores.nombre = ["El nombre es requerido."];
   if (!apellido) errores.apellido = ["El apellido es requerido."];
   if (!email) errores.email = ["El email es requerido."];
-  if (!fechaNacStr) errores.fechaNac = ["La fecha de nacimiento es requerida."];
+  if (!fechaNacStr) {
+    errores.fechaNac = ["La fecha de nacimiento es requerida."];
+  } else {
+    const fechaNac = new Date(fechaNacStr);
+    if (isNaN(fechaNac.getTime())) {
+      errores.fechaNac = ["La fecha ingresada no es válida."];
+    } else {
+      const hoy = new Date();
+      let edad = hoy.getFullYear() - fechaNac.getFullYear();
+      const m = hoy.getMonth() - fechaNac.getMonth();
+      if (m < 0 || (m === 0 && hoy.getDate() < fechaNac.getDate())) {
+        edad--;
+      }
+
+      if (fechaNac > hoy) {
+        errores.fechaNac = ["La fecha de nacimiento no puede estar en el futuro."];
+      } else if (edad < 18) {
+        errores.fechaNac = ["El profesor debe ser mayor de 18 años."];
+      }
+    }
+  }
+
+  // Verificar si existe el DNI o Email en BD solo si no hay errores previos en esos campos
+  const promesasDb = [];
+
+  if (!errores.dni) {
+    promesasDb.push(
+      prisma.usuario.findUnique({ where: { dni: Number(dniStr) } }).then((u) => {
+        if (u) errores.dni = ["Ya existe un usuario con este DNI."];
+      })
+    );
+  }
+
+  if (!errores.email) {
+    promesasDb.push(
+      prisma.usuario.findUnique({ where: { email } }).then((u) => {
+        if (u) errores.email = ["Ya existe un usuario con este email."];
+      })
+    );
+  }
+
+  await Promise.all(promesasDb);
 
   if (Object.keys(errores).length > 0) {
     return { errores, valores };
@@ -53,44 +94,6 @@ export async function registrarProfesor(
 
   const dni = Number(dniStr);
   const fechaNac = new Date(fechaNacStr);
-
-  if (isNaN(fechaNac.getTime())) {
-    errores.fechaNac = ["La fecha ingresada no es válida."];
-  } else {
-    const hoy = new Date();
-    let edad = hoy.getFullYear() - fechaNac.getFullYear();
-    const m = hoy.getMonth() - fechaNac.getMonth();
-    if (m < 0 || (m === 0 && hoy.getDate() < fechaNac.getDate())) {
-      edad--;
-    }
-
-    if (fechaNac > hoy) {
-      errores.fechaNac = ["La fecha de nacimiento no puede estar en el futuro."];
-    } else if (edad < 18) {
-      errores.fechaNac = ["El profesor debe ser mayor de 18 años."];
-    }
-  }
-
-  if (Object.keys(errores).length > 0) {
-    return { errores, valores };
-  }
-
-  // Verificar si existe el DNI o Email
-  const [usuarioPorDni, usuarioPorEmail] = await Promise.all([
-    prisma.usuario.findUnique({ where: { dni } }),
-    prisma.usuario.findUnique({ where: { email } }),
-  ]);
-
-  if (usuarioPorDni) {
-    errores.dni = ["Ya existe un usuario con este DNI."];
-  }
-  if (usuarioPorEmail) {
-    errores.email = ["Ya existe un usuario con este email."];
-  }
-
-  if (Object.keys(errores).length > 0) {
-    return { errores, valores };
-  }
 
   try {
     // La contraseña por defecto es el DNI
