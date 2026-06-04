@@ -31,21 +31,6 @@ export default async function PaginaMisClases() {
     const treintaDiasAtras = new Date(ahora);
     treintaDiasAtras.setDate(treintaDiasAtras.getDate() - 30);
 
-    const inscripcionesActivas = await prisma.inscripcion.count({
-      where: {
-        usuarioId: usuario.id,
-        estado: "ACTIVA",
-        clase: { fechaHora: { gt: limiteInferior }, estado: "ACTIVA" },
-      },
-    });
-
-    const enListaEspera = await prisma.listaEspera.count({
-      where: {
-        usuarioId: usuario.id,
-        clase: { fechaHora: { gt: limiteInferior }, estado: "ACTIVA" },
-      },
-    });
-
     const proximaConfirmada = await prisma.inscripcion.findFirst({
       where: {
         usuarioId: usuario.id,
@@ -119,16 +104,6 @@ export default async function PaginaMisClases() {
           }}
         >
           <TarjetaEstadistica
-            titulo="Inscripciones activas"
-            valor={String(inscripcionesActivas)}
-            icono="▣"
-          />
-          <TarjetaEstadistica
-            titulo="En lista de espera"
-            valor={String(enListaEspera)}
-            icono="⏳"
-          />
-          <TarjetaEstadistica
             titulo="Próxima clase"
             valor={fechaProxima}
             icono="🗓️"
@@ -158,7 +133,7 @@ export default async function PaginaMisClases() {
                 gap: 8,
               }}
             >
-              ✅ Confirmadas (próx. 7 días)
+              ✅ Próximas clases (7 días)
             </h2>
             {proximas7Dias.length === 0 ? (
               <p
@@ -417,22 +392,21 @@ function ClaseListItem({
         </p>
       </div>
       <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
-        <div
-          style={{
-            background:
-              estado === "Confirmada"
-                ? "rgba(34, 197, 94, 0.1)"
-                : "rgba(234, 179, 8, 0.1)",
-            color: estado === "Confirmada" ? "#16a34a" : "#ca8a04",
-            padding: "4px 10px",
-            borderRadius: 8,
-            fontSize: "0.8rem",
-            fontWeight: 600,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {estado}
-        </div>
+        {estado !== "Confirmada" && (
+          <div
+            style={{
+              background: "rgba(234, 179, 8, 0.1)",
+              color: "#ca8a04",
+              padding: "4px 10px",
+              borderRadius: 8,
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {estado}
+          </div>
+        )}
         {claseId && inicioVentana && finVentana && estado === "Confirmada" && (
           <BotonEscanearCliente
             claseId={claseId}
