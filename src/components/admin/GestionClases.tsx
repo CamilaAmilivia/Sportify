@@ -142,27 +142,8 @@ export function GestionClases({
       </div>
 
       <div style={{ background: "white", padding: "28px", borderRadius: "18px", marginBottom: "32px", border: "1px solid rgba(0,0,0,0.06)", boxShadow: "0 8px 24px rgba(0,0,0,0.04)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px", marginBottom: "20px" }}>
+        <div style={{ marginBottom: "20px" }}>
           <h3 style={{ margin: 0, color: "var(--color-dark)", fontSize: "1.2rem", fontWeight: 700 }}>Filtros de vista</h3>
-          <button
-            type="button"
-            onClick={fetchClases}
-            style={{
-              padding: "10px 16px",
-              background: "#f8fafc",
-              color: "var(--color-dark)",
-              border: "1px solid rgba(0,0,0,0.1)",
-              borderRadius: 8,
-              fontSize: "0.9rem",
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px"
-            }}
-          >
-            🔄 Refrescar lista
-          </button>
         </div>
         <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
           <div>
