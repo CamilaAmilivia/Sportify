@@ -13,7 +13,9 @@ export async function cerrarSesion() {
 export type CrearClaseErrores = {
   titulo?: string[];
   profesorId?: string[];
-  fechaHora?: string[];
+  diaSemana?: string[];
+  fechaInicio?: string[];
+  fechaFin?: string[];
   horaInicio?: string[];
   horaFin?: string[];
   disciplinaId?: string[];
@@ -25,7 +27,9 @@ export type CrearClaseErrores = {
 export async function crearClase(formData: {
   titulo: string;
   profesorId: number;
-  fechaHora: string;
+  diaSemana: number;
+  fechaInicio?: string;
+  fechaFin?: string;
   horaInicio: string;
   horaFin: string;
   disciplinaId: number;
@@ -38,7 +42,7 @@ export async function crearClase(formData: {
     // Validar datos básicos
     if (!formData.titulo) errores.titulo = ["El título de la clase es requerido"];
     if (!formData.profesorId || isNaN(formData.profesorId)) errores.profesorId = ["Debes seleccionar un profesor"];
-    if (!formData.fechaHora) errores.fechaHora = ["La fecha es requerida"];
+    if (formData.diaSemana === undefined || formData.diaSemana < 0 || formData.diaSemana > 6) errores.diaSemana = ["El día de la semana es requerido"];
     if (!formData.horaInicio) errores.horaInicio = ["La hora de inicio es requerida"];
     if (!formData.horaFin) errores.horaFin = ["La hora de fin es requerida"];
     if (!formData.cupoMaximo || formData.cupoMaximo <= 0) {
@@ -79,56 +83,58 @@ export async function crearClase(formData: {
     }
 
     let fechaInicio: Date | null = null;
-    let fechaFin: Date | null = null;
+    let fechaLimite: Date | null = null;
     let duracionMin = 0;
+    let horaInicioH = 0;
+    let horaInicioM = 0;
     let horaFinH = 0;
     let horaFinM = 0;
-    let anio = 0;
-    let mes = 0;
-    let dia = 0;
 
-    // Procesar fecha y hora solo si los campos básicos están presentes
-    if (!errores.fechaHora && !errores.horaInicio && !errores.horaFin) {
-      const [horaInicioH, horaInicioM] = formData.horaInicio.split(":").map(Number);
+    // Procesar fecha y hora
+    if (!errores.diaSemana && !errores.horaInicio && !errores.horaFin) {
+      [horaInicioH, horaInicioM] = formData.horaInicio.split(":").map(Number);
       [horaFinH, horaFinM] = formData.horaFin.split(":").map(Number);
-      [anio, mes, dia] = formData.fechaHora.split("-").map(Number);
+      
+      const inicioMin = horaInicioH * 60 + horaInicioM;
+      const finMin = horaFinH * 60 + horaFinM;
+      duracionMin = finMin - inicioMin;
 
-      if (!dia || !mes || !anio) {
-        errores.fechaHora = ["Fecha inválida"];
-      } else if (anio < 2000 || anio > 2099) {
-        errores.fechaHora = ["El año debe estar entre 2000 y 2099"];
-      } else if (mes < 1 || mes > 12) {
-        errores.fechaHora = ["El mes debe estar entre 01 y 12"];
+      if (duracionMin <= 0) {
+        errores.horaFin = ["La hora de fin debe ser posterior a la hora de inicio"];
+      }
+
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+
+      if (formData.fechaInicio) {
+        // Asume formato "YYYY-MM-DD"
+        const [y, m, d] = formData.fechaInicio.split("-").map(Number);
+        fechaInicio = new Date(y, m - 1, d);
+        fechaInicio.setHours(horaInicioH, horaInicioM, 0, 0);
       } else {
-        const esBisiesto = (year: number) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-        const diasPorMes = [31, esBisiesto(anio) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-        const diasEnMes = diasPorMes[mes - 1];
-
-        if (dia < 1 || dia > diasEnMes) {
-          errores.fechaHora = [`El día debe estar entre 01 y ${diasEnMes}`];
-        } else {
-          fechaInicio = new Date(anio, mes - 1, dia);
-          if (fechaInicio.getFullYear() !== anio || fechaInicio.getMonth() !== mes - 1 || fechaInicio.getDate() !== dia) {
-            errores.fechaHora = ["Fecha inválida"];
-          } else {
-            fechaInicio.setHours(horaInicioH, horaInicioM, 0, 0);
-            if (fechaInicio.getTime() <= Date.now()) {
-              errores.fechaHora = ["La fecha y hora no puede ser anterior al momento actual"];
-            }
-
-            fechaFin = new Date(anio, mes - 1, dia);
-            fechaFin.setHours(horaFinH, horaFinM, 0, 0);
-            duracionMin = Math.round((fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60));
-
-            if (duracionMin <= 0) {
-              errores.horaFin = ["La hora de fin debe ser posterior a la hora de inicio"];
-            }
-          }
+        fechaInicio = new Date(hoy);
+        let diasParaProximo = formData.diaSemana - hoy.getDay();
+        if (diasParaProximo <= 0) {
+          diasParaProximo += 7;
         }
+        fechaInicio.setDate(hoy.getDate() + diasParaProximo);
+        fechaInicio.setHours(horaInicioH, horaInicioM, 0, 0);
+      }
+
+      if (formData.fechaFin) {
+        const [y, m, d] = formData.fechaFin.split("-").map(Number);
+        fechaLimite = new Date(y, m - 1, d);
+        fechaLimite.setHours(23, 59, 59, 999);
+      } else {
+        fechaLimite = new Date(fechaInicio.getFullYear(), 11, 31, 23, 59, 59, 999); // 31 de dic
+      }
+
+      if (fechaInicio > fechaLimite) {
+         errores.fechaFin = ["La fecha de fin no puede ser anterior al inicio"];
       }
     }
 
-    if (Object.keys(errores).length > 0 || !fechaInicio || !fechaFin || !profesorEncontrado || !disciplinaActual) {
+    if (Object.keys(errores).length > 0 || !fechaInicio || !fechaLimite || !profesorEncontrado || !disciplinaActual) {
       return { errores };
     }
 
@@ -145,7 +151,7 @@ export async function crearClase(formData: {
 
     if (claseDelProfesorEnHorario) {
       errores.profesorId = [
-        `${profesorEncontrado.nombre} ya tiene una clase asignada el ${dia.toString().padStart(2, '0')}/${mes.toString().padStart(2, '0')}/${anio} en el horario ${formData.horaInicio} - ${formData.horaFin}`,
+        `${profesorEncontrado.nombre} ya tiene una clase asignada el ${fechaInicio.getDate().toString().padStart(2, '0')}/${(fechaInicio.getMonth()+1).toString().padStart(2, '0')}/${fechaInicio.getFullYear()} en el horario ${formData.horaInicio} - ${formData.horaFin}`,
       ];
     }
 
@@ -200,7 +206,9 @@ export async function crearClase(formData: {
     const formatearFecha = (fecha: Date) =>
       fecha.toLocaleDateString("es-AR");
 
-    while (fechaActual.getMonth() === fechaInicio.getMonth()) {
+    const serieId = crypto.randomUUID();
+
+    while (fechaActual <= fechaLimite) {
 
       const fechaFinActual = new Date(fechaActual);
       fechaFinActual.setHours(horaFinH, horaFinM, 0, 0);
@@ -311,6 +319,7 @@ export async function crearClase(formData: {
           cupoMaximo: formData.cupoMaximo,
           precio: formData.precio || 0,
           estado: "ACTIVA",
+          serieId: serieId,
         },
       });
 

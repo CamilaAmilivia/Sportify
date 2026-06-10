@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { crearClase, CrearClaseErrores } from "@/app/plataforma/actions";
 
 type FormularioCrearClaseProps = {
@@ -15,6 +15,16 @@ type FormularioCrearClaseProps = {
   onSuccess: () => void;
 };
 
+const diasSemana = [
+  { valor: 1, nombre: "Lunes" },
+  { valor: 2, nombre: "Martes" },
+  { valor: 3, nombre: "Miércoles" },
+  { valor: 4, nombre: "Jueves" },
+  { valor: 5, nombre: "Viernes" },
+  { valor: 6, nombre: "Sábado" },
+  { valor: 0, nombre: "Domingo" },
+];
+
 export function FormularioCrearClase({
   disciplinas,
   profesores,
@@ -27,7 +37,11 @@ export function FormularioCrearClase({
   const [formData, setFormData] = useState({
     titulo: "",
     profesorId: "",
-    fechaHora: "",
+    diaSemana: 3, // Miércoles por defecto
+    personalizarInicio: false,
+    fechaInicio: "",
+    personalizarFin: false,
+    fechaFin: "",
     horaInicio: "10:00",
     horaFin: "11:00",
     disciplinaId: disciplinas[0]?.id || 1,
@@ -35,31 +49,66 @@ export function FormularioCrearClase({
     precio: "" as unknown as number,
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    if (mensajeExito) setMensajeExito(null);
-    const { name, value } = e.target;
+  const getProximasFechas = (diaSemana: number) => {
+    const fechas = [];
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
 
-    // No validation for date needed, it uses type="date"
-    if (name === "horaInicio" || name === "horaFin") {
-      const soloDigitos = value.replace(/[^\d]/g, "");
-      if (soloDigitos.length <= 4) {
-        let formattedTime = soloDigitos;
-        if (soloDigitos.length >= 3) {
-          formattedTime = soloDigitos.slice(0, 2) + ":" + soloDigitos.slice(2);
-        }
-        setFormData((prev) => ({
-          ...prev,
-          [name]: formattedTime,
-        }));
+    let diasParaProximo = diaSemana - hoy.getDay();
+    if (diasParaProximo < 0) {
+      diasParaProximo += 7;
+    }
+
+    const primeraFecha = new Date(hoy);
+    primeraFecha.setDate(hoy.getDate() + diasParaProximo);
+
+    for (let i = 0; i < 4; i++) {
+      const fecha = new Date(primeraFecha);
+      fecha.setDate(primeraFecha.getDate() + i * 7);
+      fechas.push(fecha);
+    }
+    return fechas;
+  };
+
+  const proximasFechas = getProximasFechas(Number(formData.diaSemana));
+
+  useEffect(() => {
+    if (formData.personalizarInicio) {
+      if (!formData.fechaInicio) {
+        // Set to first option by default in format YYYY-MM-DD
+        const [dia, mes, anio] = proximasFechas[0].toLocaleDateString("es-AR", { year: "numeric", month: "2-digit", day: "2-digit" }).split("/");
+        setFormData((prev) => ({ ...prev, fechaInicio: `${anio}-${mes}-${dia}` }));
       }
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: name === "disciplinaId" || name === "profesorId" || name === "cupoMaximo" || name === "precio"
-          ? parseFloat(value)
-          : value,
-      }));
+      setFormData((prev) => ({ ...prev, fechaInicio: "" }));
     }
+  }, [formData.personalizarInicio, formData.diaSemana]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (mensajeExito) setMensajeExito(null);
+    const { name, value, type } = e.target as HTMLInputElement;
+
+    let finalValue: any = value;
+    if (type === "checkbox") {
+      finalValue = (e.target as HTMLInputElement).checked;
+    } else if (name === "horaInicio" || name === "horaFin") {
+      const soloDigitos = value.replace(/[^\d]/g, "");
+      if (soloDigitos.length <= 4) {
+        finalValue = soloDigitos;
+        if (soloDigitos.length >= 3) {
+          finalValue = soloDigitos.slice(0, 2) + ":" + soloDigitos.slice(2);
+        }
+      } else {
+        return; // Don't update if it exceeds 4 digits
+      }
+    } else if (name === "disciplinaId" || name === "profesorId" || name === "cupoMaximo" || name === "precio" || name === "diaSemana") {
+      finalValue = parseFloat(value);
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: finalValue,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -67,15 +116,23 @@ export function FormularioCrearClase({
     setCargando(true);
     setErrores({});
 
-    const result = await crearClase({
-      ...formData,
+    const datosAEnviar = {
+      titulo: formData.titulo,
       profesorId: Number(formData.profesorId),
-    });
+      diaSemana: Number(formData.diaSemana),
+      fechaInicio: formData.personalizarInicio ? formData.fechaInicio : undefined,
+      fechaFin: formData.personalizarFin ? formData.fechaFin : undefined,
+      horaInicio: formData.horaInicio,
+      horaFin: formData.horaFin,
+      disciplinaId: Number(formData.disciplinaId),
+      cupoMaximo: Number(formData.cupoMaximo),
+      precio: Number(formData.precio) || undefined,
+    };
+
+    const result = await crearClase(datosAEnviar);
 
     if (result.success) {
-      const partesFecha = formData.fechaHora.split("-");
-      const fechaFormateada = partesFecha.length === 3 ? `${partesFecha[2]}/${partesFecha[1]}/${partesFecha[0]}` : formData.fechaHora;
-      setMensajeExito(`Se creó la clase ${formData.titulo} para el ${fechaFormateada} en el horario ${formData.horaInicio} a ${formData.horaFin}`);
+      setMensajeExito(`Se creó la serie de clases ${formData.titulo} exitosamente para el horario ${formData.horaInicio} a ${formData.horaFin}.`);
       onSuccess();
       setCargando(false);
     } else if (result.errores) {
@@ -86,6 +143,20 @@ export function FormularioCrearClase({
       setCargando(false);
     }
   };
+
+  const calcularUltimaClase = () => {
+    if (!formData.fechaFin) return null;
+    const fin = new Date(formData.fechaFin + "T00:00:00");
+    const diaFin = fin.getDay();
+    let diasAtras = diaFin - Number(formData.diaSemana);
+    if (diasAtras < 0) diasAtras += 7;
+    const ultima = new Date(fin);
+    ultima.setDate(fin.getDate() - diasAtras);
+
+    return ultima.toLocaleDateString("es-AR", { weekday: 'long', day: 'numeric', month: 'long' });
+  };
+
+  const ultimaClase = calcularUltimaClase();
 
   return (
     <div
@@ -123,7 +194,7 @@ export function FormularioCrearClase({
             marginBottom: 24,
           }}
         >
-          Crear clase
+          Crear serie de clases
         </h2>
 
         {errores.general && (
@@ -143,14 +214,7 @@ export function FormularioCrearClase({
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <label
-              style={{
-                display: "block",
-                marginBottom: 8,
-                fontWeight: 600,
-                color: "var(--color-dark)",
-              }}
-            >
+            <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "var(--color-dark)" }}>
               Nombre de la clase *
             </label>
             <input
@@ -161,28 +225,14 @@ export function FormularioCrearClase({
               placeholder="Ej: Yoga Avanzado"
               required
               style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: "1px solid rgba(0,0,0,0.1)",
-                borderRadius: 8,
-                fontSize: "1rem",
-                boxSizing: "border-box",
+                width: "100%", padding: "10px 12px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "1rem", boxSizing: "border-box"
               }}
             />
-            {errores.titulo && (
-              <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.titulo[0]}</span>
-            )}
+            {errores.titulo && <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.titulo[0]}</span>}
           </div>
 
           <div>
-            <label
-              style={{
-                display: "block",
-                marginBottom: 8,
-                fontWeight: 600,
-                color: "var(--color-dark)",
-              }}
-            >
+            <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "var(--color-dark)" }}>
               Profesor *
             </label>
             <select
@@ -191,39 +241,21 @@ export function FormularioCrearClase({
               onChange={handleChange}
               required
               style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: "1px solid rgba(0,0,0,0.1)",
-                borderRadius: 8,
-                fontSize: "1rem",
-                boxSizing: "border-box",
+                width: "100%", padding: "10px 12px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "1rem", boxSizing: "border-box"
               }}
             >
               <option value="">Seleccionar profesor</option>
-
               {profesores.map((profesor) => (
-                <option
-                  key={profesor.id}
-                  value={profesor.id}
-                >
+                <option key={profesor.id} value={profesor.id}>
                   {profesor.nombre} {profesor.apellido} (DNI: {profesor.dni})
                 </option>
               ))}
             </select>
-            {errores.profesorId && (
-              <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.profesorId[0]}</span>
-            )}
+            {errores.profesorId && <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.profesorId[0]}</span>}
           </div>
 
           <div>
-            <label
-              style={{
-                display: "block",
-                marginBottom: 8,
-                fontWeight: 600,
-                color: "var(--color-dark)",
-              }}
-            >
+            <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "var(--color-dark)" }}>
               Disciplina *
             </label>
             <select
@@ -231,142 +263,163 @@ export function FormularioCrearClase({
               value={formData.disciplinaId}
               onChange={handleChange}
               style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: "1px solid rgba(0,0,0,0.1)",
-                borderRadius: 8,
-                fontSize: "1rem",
-                boxSizing: "border-box",
+                width: "100%", padding: "10px 12px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "1rem", boxSizing: "border-box"
               }}
             >
               {disciplinas.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.nombre}
-                </option>
+                <option key={d.id} value={d.id}>{d.nombre}</option>
               ))}
             </select>
-            {errores.disciplinaId && (
-              <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.disciplinaId[0]}</span>
-            )}
+            {errores.disciplinaId && <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.disciplinaId[0]}</span>}
           </div>
 
-          <div>
-            <label
-              style={{
-                display: "block",
-                marginBottom: 8,
-                fontWeight: 600,
-                color: "var(--color-dark)",
-              }}
-            >
-              Fecha *
-            </label>
-            <input
-              type="date"
-              name="fechaHora"
-              value={formData.fechaHora}
-              onChange={handleChange}
-              lang="es-AR"
-              required
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: "1px solid rgba(0,0,0,0.1)",
-                borderRadius: 8,
-                fontSize: "1rem",
-                boxSizing: "border-box",
-              }}
-            />
-            {errores.fechaHora && (
-              <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.fechaHora[0]}</span>
-            )}
+          <div style={{ padding: "16px", background: "#f8fafc", borderRadius: "12px", border: "1px solid rgba(0,0,0,0.06)" }}>
+            <h3 style={{ fontSize: "1.1rem", margin: "0 0 16px 0", color: "var(--color-dark)" }}>Frecuencia y horario</h3>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "var(--color-dark)" }}>
+                Día de la semana *
+              </label>
+              <select
+                name="diaSemana"
+                value={formData.diaSemana}
+                onChange={handleChange}
+                required
+                style={{
+                  width: "100%", padding: "10px 12px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "1rem", boxSizing: "border-box"
+                }}
+              >
+                {diasSemana.map((dia) => (
+                  <option key={dia.valor} value={dia.valor}>{dia.nombre}</option>
+                ))}
+              </select>
+              {errores.diaSemana && <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.diaSemana[0]}</span>}
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 500, color: "var(--color-dark)", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  name="personalizarInicio"
+                  checked={formData.personalizarInicio}
+                  onChange={handleChange}
+                  style={{ width: "16px", height: "16px" }}
+                />
+                Personalizar inicio de clases
+              </label>
+              <p style={{ fontSize: "0.85rem", color: "var(--color-gray)", margin: "4px 0 0 24px" }}>
+                Por defecto, la serie comenzará el próximo {diasSemana.find(d => d.valor === Number(formData.diaSemana))?.nombre.toLowerCase()}.
+              </p>
+
+              {formData.personalizarInicio && (
+                <div style={{ marginTop: 12, marginLeft: 24 }}>
+                  <select
+                    name="fechaInicio"
+                    value={formData.fechaInicio}
+                    onChange={handleChange}
+                    required
+                    style={{
+                      width: "100%", padding: "10px 12px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "0.95rem", boxSizing: "border-box"
+                    }}
+                  >
+                    {proximasFechas.map((fecha, idx) => {
+                      const [dia, mes, anio] = fecha.toLocaleDateString("es-AR", { year: "numeric", month: "2-digit", day: "2-digit" }).split("/");
+                      const dateStr = `${anio}-${mes}-${dia}`;
+                      return (
+                        <option key={dateStr} value={dateStr}>
+                          {fecha.toLocaleDateString("es-AR", { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {errores.fechaInicio && <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.fechaInicio[0]}</span>}
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 500, color: "var(--color-dark)", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  name="personalizarFin"
+                  checked={formData.personalizarFin}
+                  onChange={handleChange}
+                  style={{ width: "16px", height: "16px" }}
+                />
+                Personalizar fin de clases
+              </label>
+              <p style={{ fontSize: "0.85rem", color: "var(--color-gray)", margin: "4px 0 0 24px" }}>
+                Por defecto, se repetirán hasta el 31 de diciembre del año actual.
+              </p>
+
+              {formData.personalizarFin && (
+                <div style={{ marginTop: 12, marginLeft: 24 }}>
+                  <input
+                    type="date"
+                    name="fechaFin"
+                    value={formData.fechaFin}
+                    onChange={handleChange}
+                    required
+                    min={formData.personalizarInicio && formData.fechaInicio ? formData.fechaInicio : proximasFechas[0].toLocaleDateString("es-AR", { year: "numeric", month: "2-digit", day: "2-digit" }).split("/").reverse().join("-")}
+                    max={`${new Date().getFullYear() + (new Date().getMonth() === 11 ? 1 : 0)}-12-31`}
+                    style={{
+                      width: "100%", padding: "10px 12px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "0.95rem", boxSizing: "border-box"
+                    }}
+                  />
+                  {ultimaClase && (
+                    <div style={{ marginTop: 8, padding: 8, background: "#e0f2fe", color: "#0369a1", borderRadius: 6, fontSize: "0.85rem", fontWeight: 500 }}>
+                      ℹ️ La última clase será el {ultimaClase}.
+                    </div>
+                  )}
+                  {errores.fechaFin && <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.fechaFin[0]}</span>}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "var(--color-dark)", fontSize: "0.95rem" }}>
+                  Hora inicio *
+                </label>
+                <input
+                  type="text"
+                  name="horaInicio"
+                  value={formData.horaInicio}
+                  onChange={handleChange}
+                  placeholder="HH:MM"
+                  maxLength={5}
+                  pattern="^([01]\d|2[0-3]):([0-5]\d)$"
+                  title="Formato de 24 horas (ej. 14:30)"
+                  required
+                  style={{ width: "100%", padding: "10px 12px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "1rem", boxSizing: "border-box" }}
+                />
+                {errores.horaInicio && <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.horaInicio[0]}</span>}
+              </div>
+
+              <div>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "var(--color-dark)", fontSize: "0.95rem" }}>
+                  Hora fin *
+                </label>
+                <input
+                  type="text"
+                  name="horaFin"
+                  value={formData.horaFin}
+                  onChange={handleChange}
+                  placeholder="HH:MM"
+                  maxLength={5}
+                  pattern="^([01]\d|2[0-3]):([0-5]\d)$"
+                  title="Formato de 24 horas (ej. 14:30)"
+                  required
+                  style={{ width: "100%", padding: "10px 12px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "1rem", boxSizing: "border-box" }}
+                />
+                {errores.horaFin && <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.horaFin[0]}</span>}
+              </div>
+            </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: 8,
-                  fontWeight: 600,
-                  color: "var(--color-dark)",
-                  fontSize: "0.95rem",
-                }}
-              >
-                Hora inicio *
-              </label>
-              <input
-                type="text"
-                name="horaInicio"
-                value={formData.horaInicio}
-                onChange={handleChange}
-                placeholder="HH:MM"
-                maxLength={5}
-                pattern="^([01]\d|2[0-3]):([0-5]\d)$"
-                title="Formato de 24 horas (ej. 14:30)"
-                required
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                  borderRadius: 8,
-                  fontSize: "1rem",
-                  boxSizing: "border-box",
-                }}
-              />
-              {errores.horaInicio && (
-                <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.horaInicio[0]}</span>
-              )}
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: 8,
-                  fontWeight: 600,
-                  color: "var(--color-dark)",
-                  fontSize: "0.95rem",
-                }}
-              >
-                Hora fin *
-              </label>
-              <input
-                type="text"
-                name="horaFin"
-                value={formData.horaFin}
-                onChange={handleChange}
-                placeholder="HH:MM"
-                maxLength={5}
-                pattern="^([01]\d|2[0-3]):([0-5]\d)$"
-                title="Formato de 24 horas (ej. 14:30)"
-                required
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                  borderRadius: 8,
-                  fontSize: "1rem",
-                  boxSizing: "border-box",
-                }}
-              />
-              {errores.horaFin && (
-                <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.horaFin[0]}</span>
-              )}
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: 8,
-                  fontWeight: 600,
-                  color: "var(--color-dark)",
-                  fontSize: "0.95rem",
-                }}
-              >
+              <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "var(--color-dark)", fontSize: "0.95rem" }}>
                 Cupo máximo *
               </label>
               <input
@@ -376,45 +429,17 @@ export function FormularioCrearClase({
                 onChange={handleChange}
                 min="1"
                 required
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                  borderRadius: 8,
-                  fontSize: "1rem",
-                  boxSizing: "border-box",
-                }}
+                style={{ width: "100%", padding: "10px 12px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "1rem", boxSizing: "border-box" }}
               />
-              {errores.cupoMaximo && (
-                <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.cupoMaximo[0]}</span>
-              )}
+              {errores.cupoMaximo && <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.cupoMaximo[0]}</span>}
             </div>
 
             <div>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: 8,
-                  fontWeight: 600,
-                  color: "var(--color-dark)",
-                  fontSize: "0.95rem",
-                }}
-              >
+              <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "var(--color-dark)", fontSize: "0.95rem" }}>
                 Precio
               </label>
               <div style={{ position: "relative" }}>
-                <span
-                  style={{
-                    position: "absolute",
-                    left: 12,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "var(--color-gray)",
-                    fontSize: "1rem",
-                  }}
-                >
-                  $
-                </span>
+                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--color-gray)", fontSize: "1rem" }}>$</span>
                 <input
                   type="number"
                   name="precio"
@@ -423,19 +448,10 @@ export function FormularioCrearClase({
                   min="1"
                   step="0.01"
                   required
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px 10px 28px",
-                    border: "1px solid rgba(0,0,0,0.1)",
-                    borderRadius: 8,
-                    fontSize: "1rem",
-                    boxSizing: "border-box",
-                  }}
+                  style={{ width: "100%", padding: "10px 12px 10px 28px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "1rem", boxSizing: "border-box" }}
                 />
               </div>
-              {errores.precio && (
-                <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.precio[0]}</span>
-              )}
+              {errores.precio && <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.precio[0]}</span>}
             </div>
           </div>
 
@@ -467,73 +483,34 @@ export function FormularioCrearClase({
                   type="button"
                   onClick={() => setMensajeExito(null)}
                   style={{
-                    position: "absolute",
-                    top: "4px",
-                    right: "4px",
-                    background: "transparent",
-                    border: "none",
-                    color: "#166534",
-                    cursor: "pointer",
-                    padding: "4px",
-                    lineHeight: 1,
-                    fontSize: "1.2rem",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    position: "absolute", top: "4px", right: "4px", background: "transparent", border: "none", color: "#166534", cursor: "pointer", padding: "4px", lineHeight: 1, fontSize: "1.2rem", display: "flex", alignItems: "center", justifyContent: "center"
                   }}
                 >
                   ×
                 </button>
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: "-6px",
-                    right: "25%",
-                    width: "12px",
-                    height: "12px",
-                    background: "#dcfce7",
-                    borderBottom: "1px solid #bbf7d0",
-                    borderRight: "1px solid #bbf7d0",
-                    transform: "rotate(45deg)",
-                  }}
-                />
               </div>
             )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
               <button
                 type="button"
                 onClick={onClose}
-              disabled={cargando}
-              style={{
-                padding: "12px 16px",
-                border: "1px solid rgba(0,0,0,0.2)",
-                borderRadius: 8,
-                background: "white",
-                color: "var(--color-dark)",
-                fontWeight: 600,
-                cursor: "pointer",
-                opacity: cargando ? 0.6 : 1,
-              }}
-            >
-              Cancelar
-            </button>
+                disabled={cargando}
+                style={{
+                  padding: "12px 16px", border: "1px solid rgba(0,0,0,0.2)", borderRadius: 8, background: "white", color: "var(--color-dark)", fontWeight: 600, cursor: "pointer", opacity: cargando ? 0.6 : 1
+                }}
+              >
+                Cancelar
+              </button>
 
-            <button
-              type="submit"
-              disabled={cargando}
-              style={{
-                padding: "12px 16px",
-                border: "none",
-                borderRadius: 8,
-                background: "#22c55e",
-                color: "white",
-                fontWeight: 600,
-                cursor: cargando ? "not-allowed" : "pointer",
-                opacity: cargando ? 0.7 : 1,
-              }}
-            >
-              {cargando ? "Creando..." : "Confirmar"}
-            </button>
+              <button
+                type="submit"
+                disabled={cargando}
+                style={{
+                  padding: "12px 16px", border: "none", borderRadius: 8, background: "#22c55e", color: "white", fontWeight: 600, cursor: cargando ? "not-allowed" : "pointer", opacity: cargando ? 0.7 : 1
+                }}
+              >
+                {cargando ? "Creando..." : "Confirmar"}
+              </button>
             </div>
           </div>
         </form>

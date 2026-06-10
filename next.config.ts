@@ -24,7 +24,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "250mb",
     },
   },
-  allowedDevOrigins: [...getLocalIPs(), NGROK_HOST],
+  allowedDevOrigins: [...getLocalIPs(), NGROK_HOST].filter((host): host is string => !!host),
 };
 
 export default nextConfig;

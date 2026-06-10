@@ -10,6 +10,7 @@ type BotonCrearClaseProps = {
     id: number;
     nombre: string;
     apellido: string;
+    dni: number;
   }>;
 };
 

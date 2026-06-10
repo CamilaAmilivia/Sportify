@@ -81,6 +81,8 @@ model Clase {
   cupoMaximo  Int        @default(1)
   precio      Float      @default(0)
   estado      EstadoClase @default(ACTIVA)
+  qrActivo    Boolean    @default(false)
+  serieId     String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
