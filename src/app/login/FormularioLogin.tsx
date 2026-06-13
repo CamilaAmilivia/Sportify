@@ -1,9 +1,8 @@
 "use client";
 
-import { useActionState, useState, useEffect } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { iniciarSesion, LoginState } from "./actions";
-import { FormularioCambioPassword } from "./FormularioCambioPassword";
 
 const estadoInicial: LoginState = {};
 
@@ -13,17 +12,9 @@ export default function FormularioLogin() {
     estadoInicial
   );
   const [mostrarPassword, setMostrarPassword] = useState(false);
-  const [showModal, setShowModal] = useState(true);
-
-  useEffect(() => {
-    if (state.requiereCambioPassword) {
-      setShowModal(true);
-    }
-  }, [state.requiereCambioPassword]);
 
   return (
-    <>
-      <form
+    <form
       action={action}
       style={{ display: "flex", flexDirection: "column", gap: 20 }}
     >
@@ -152,14 +143,5 @@ export default function FormularioLogin() {
         {isPending ? "Verificando..." : "Iniciar sesión"}
       </button>
     </form>
-    
-    {state.requiereCambioPassword && showModal && state.emailConfirmado && state.passwordActual && (
-      <FormularioCambioPassword
-        email={state.emailConfirmado}
-        passwordActual={state.passwordActual}
-        onClose={() => setShowModal(false)}
-      />
-    )}
-    </>
   );
 }
