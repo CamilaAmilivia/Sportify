@@ -59,42 +59,127 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    if (tipoPago === TIPOS_PAGO.CLASE_INDIVIDUAL) {
+  const limite = new Date();
+
+  limite.setDate(limite.getDate() + 7);
+
+  if (clase.fechaHora > limite) {
+    return NextResponse.json(
+      {
+        error:
+          "Las clases individuales sólo pueden reservarse con hasta 7 días de anticipación.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+}
 
     let montoAPagar = Number(clase.precio);
 
-    if (tipoPago === TIPOS_PAGO.MENSUALIDAD) {
-      const inicioDeMes = obtenerInicioDeMes(clase.fechaHora);
-      const finDeMes = obtenerFinDeMes(clase.fechaHora);
+if (tipoPago === TIPOS_PAGO.MENSUALIDAD) {
+  const inicioDeMes = obtenerInicioDeMes(clase.fechaHora);
+  const finDeMes = obtenerFinDeMes(clase.fechaHora);
 
-      const clasesDelMes = await prisma.clase.findMany({
-        where: {
-          estado: "ACTIVA",
-          disciplinaId: clase.disciplinaId,
-          fechaHora: {
-            gte: inicioDeMes,
-            lte: finDeMes,
-          },
+  const clasesDelMes = await prisma.clase.findMany({
+    where: {
+      estado: "ACTIVA",
+      disciplinaId: clase.disciplinaId,
+      fechaHora: {
+        gte: inicioDeMes,
+        lte: finDeMes,
+      },
+    },
+    orderBy: {
+      fechaHora: "asc",
+    },
+  });
+
+  const clasesMismoDiaYHorario = clasesDelMes.filter((claseDelMes) =>
+    esMismoDiaYHorario(clase.fechaHora, claseDelMes.fechaHora)
+  );
+
+  const clasesRestantesDelMes = clasesMismoDiaYHorario.filter(
+    (claseDelMes) => claseDelMes.fechaHora >= clase.fechaHora
+  );
+
+  montoAPagar = calcularPrecioAbonoProporcional({
+    precioMensual: PRECIO_ABONO_MENSUAL,
+    totalClasesDelMes: clasesMismoDiaYHorario.length,
+    clasesRestantesDelMes: clasesRestantesDelMes.length,
+  });
+
+let fechaDisponible: Date | null = null;
+
+for (let i = 0; i < clasesRestantesDelMes.length; i++) {
+  const claseInicio = clasesRestantesDelMes[i];
+
+  let puedeComenzarDesdeAca = true;
+
+  for (let j = i; j < clasesRestantesDelMes.length; j++) {
+    const claseAValidar = clasesRestantesDelMes[j];
+
+    const inscriptos = await prisma.inscripcion.count({
+      where: {
+        claseId: claseAValidar.id,
+        estado: "ACTIVA",
+      },
+    });
+
+    const reservasPendientes = await prisma.pago.count({
+      where: {
+        claseId: claseAValidar.id,
+        estado: "PENDIENTE",
+        reservaHasta: {
+          gt: new Date(),
         },
-        orderBy: {
-          fechaHora: "asc",
-        },
-      });
+      },
+    });
 
-      const clasesMismoDiaYHorario = clasesDelMes.filter((claseDelMes) =>
-        esMismoDiaYHorario(clase.fechaHora, claseDelMes.fechaHora)
-      );
+    const lugaresOcupados = inscriptos + reservasPendientes;
 
-      const clasesRestantesDelMes = clasesMismoDiaYHorario.filter(
-        (claseDelMes) => claseDelMes.fechaHora >= clase.fechaHora
-      );
-
-      montoAPagar = calcularPrecioAbonoProporcional({
-        precioMensual: PRECIO_ABONO_MENSUAL,
-        totalClasesDelMes: clasesMismoDiaYHorario.length,
-        clasesRestantesDelMes: clasesRestantesDelMes.length,
-      });
+    if (lugaresOcupados >= claseAValidar.cupoMaximo) {
+      puedeComenzarDesdeAca = false;
+      break;
     }
+  }
 
+  if (puedeComenzarDesdeAca) {
+    fechaDisponible = claseInicio.fechaHora;
+    break;
+  }
+}
+if (!fechaDisponible) {
+  return NextResponse.json(
+    {
+      error:
+        "No hay disponibilidad para iniciar el abono en las clases restantes de este mes.",
+    },
+    {
+      status: 400,
+    }
+  );
+}
+
+if (fechaDisponible.getTime() !== clase.fechaHora.getTime()) {
+  const fecha = fechaDisponible.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  return NextResponse.json(
+    {
+      error: `Este turno no tiene disponibilidad para comenzar ahora. Podés anotarte a partir del ${fecha}.`,
+    },
+    {
+      status: 400,
+    }
+  );
+}
+}
     if (montoAPagar <= 0) {
       return NextResponse.json(
         { error: "El pago no tiene un monto válido" },
