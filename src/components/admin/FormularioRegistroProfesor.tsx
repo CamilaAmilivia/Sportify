@@ -294,6 +294,7 @@ export function FormularioRegistroProfesor({
               name="fechaNac"
               lang="es-AR"
               required
+              max={new Date().toISOString().split('T')[0]}
               value={formData.fechaNac}
               onChange={handleChange}
               style={{

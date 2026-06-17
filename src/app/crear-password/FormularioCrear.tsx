@@ -2,15 +2,14 @@
 
 import { useState, useActionState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { checkTokenValidity, restablecerContrasena } from "./actions";
+import { checkTokenValidity, crearPassword } from "./actions";
 import Link from "next/link";
 
-export default function FormularioRestablecer() {
+export default function FormularioCrear() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const token = searchParams.get("token") || "";
 
-  const [state, formAction, isPending] = useActionState(restablecerContrasena, {});
+  const [state, formAction, isPending] = useActionState(crearPassword, {});
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -57,7 +56,7 @@ export default function FormularioRestablecer() {
   }
 
   // Si el componente Action devolvió un error de token, o el polling lo invalidó
-  if (!isTokenValid || state.mensaje === "El enlace es inválido o expiró. Por favor solicitá uno nuevo.") {
+  if (!isTokenValid || state.mensaje === "El enlace es inválido. Por favor contacta al administrador.") {
     return (
       <div style={{ textAlign: "center" }}>
         <div
@@ -72,22 +71,8 @@ export default function FormularioRestablecer() {
             marginBottom: 24,
           }}
         >
-          El enlace expiró o es inválido. Prueba solicitando otro.
+          El enlace es inválido o ya fue utilizado.
         </div>
-        <Link
-          href="/recuperar"
-          style={{
-            display: "inline-block",
-            background: "var(--color-green)",
-            color: "var(--color-dark)",
-            padding: "12px 24px",
-            borderRadius: "var(--radius-md)",
-            fontWeight: 600,
-            textDecoration: "none",
-          }}
-        >
-          Solicitar nuevo enlace
-        </Link>
       </div>
     );
   }
@@ -107,7 +92,7 @@ export default function FormularioRestablecer() {
             marginBottom: 24,
           }}
         >
-          ¡Contraseña actualizada con éxito!
+          ¡Listo! Ya podés iniciar sesión con tu contraseña.
         </div>
         <Link
           href="/login"
@@ -157,7 +142,7 @@ export default function FormularioRestablecer() {
             color: "var(--color-dark)",
           }}
         >
-          Nueva contraseña
+          Contraseña
         </label>
         <input
           type="password"
@@ -178,9 +163,7 @@ export default function FormularioRestablecer() {
           }}
         />
         {state.errores?.password && (
-          <span style={{ color: "var(--color-red)", fontSize: "0.85rem" }}>
-            {state.errores.password[0]}
-          </span>
+          <span className="form-error">⚠ {state.errores.password[0]}</span>
         )}
       </div>
 
@@ -215,9 +198,7 @@ export default function FormularioRestablecer() {
           }}
         />
         {state.errores?.confirmPassword && (
-          <span style={{ color: "var(--color-red)", fontSize: "0.85rem" }}>
-            {state.errores.confirmPassword[0]}
-          </span>
+          <span className="form-error">⚠ {state.errores.confirmPassword[0]}</span>
         )}
       </div>
 
@@ -226,7 +207,7 @@ export default function FormularioRestablecer() {
         disabled={isPending}
         style={{
           background: "var(--color-green)",
-          color: "var(--color-dark)",
+          color: "var(--color-white)",
           padding: "14px 24px",
           borderRadius: "var(--radius-md)",
           border: "none",

@@ -36,17 +36,30 @@ export async function sendPasswordResetEmail(to: string, token: string) {
     from: smtpFrom,
     to,
     subject: "Recuperación de contraseña — Sportify",
-    text: `Para restablecer tu contraseña, ingresa al siguiente enlace: ${resetUrl}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-        <h2 style="color: #22c55e;">Sportify</h2>
-        <p>Hemos recibido una solicitud para restablecer tu contraseña.</p>
-        <p>Haz clic en el siguiente botón para elegir una nueva contraseña:</p>
-        <a href="${resetUrl}" style="display: inline-block; background-color: #22c55e; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 10px; margin-bottom: 20px;">Restablecer contraseña</a>
-        <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
-        <p>El enlace expirará en 1 hora.</p>
-      </div>
-    `,
+    text: `Para restablecer tu contraseña, ingresá al siguiente enlace: ${resetUrl}\n\nSi no solicitaste este cambio, podés ignorar este correo. El enlace expirará en 1 hora.`,
+    html: `<p>Para restablecer tu contraseña, ingresá al siguiente enlace: <a href="${resetUrl}">${resetUrl}</a></p><p>Si no solicitaste este cambio, podés ignorar este correo. El enlace expirará en 1 hora.</p>`,
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
+export async function sendInitialPasswordEmail(to: string, token: string) {
+  const setupUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/crear-password?token=${token}`;
+
+  if (!smtpHost || !smtpUser) {
+    console.log("=========================================");
+    console.log(`No se configuró SMTP. Enlace de creación de contraseña para ${to}:`);
+    console.log(setupUrl);
+    console.log("=========================================");
+    return;
+  }
+
+  const mailOptions = {
+    from: smtpFrom,
+    to,
+    subject: "Invitación a Sportify",
+    text: `Fuiste invitado a unirte a Sportify como profesor. Seguí el enlace a continuación para completar tu registro: ${setupUrl}`,
+    html: `<p>Fuiste invitado a unirte a Sportify como profesor. Seguí el enlace a continuación para completar tu registro: <a href="${setupUrl}">${setupUrl}</a></p>`,
   };
 
   await transporter.sendMail(mailOptions);

@@ -28,6 +28,12 @@ export async function solicitarRecuperacion(
     });
 
     if (usuario) {
+      if (usuario.password === "") {
+        return {
+          mensaje: "Aún no has creado tu contraseña inicial. Por favor revisa el enlace enviado a tu correo electrónico al ser registrado.",
+        };
+      }
+
       // 1. Invalidar (borrar) cualquier token anterior de este usuario
       await prisma.passwordResetToken.deleteMany({
         where: { usuarioId: usuario.id },

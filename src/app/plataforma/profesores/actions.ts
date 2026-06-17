@@ -3,6 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { randomBytes } from "crypto";
+import { sendInitialPasswordEmail } from "@/lib/mail";
 
 export type RegistroProfesorState = {
   errores?: {
@@ -59,9 +61,7 @@ export async function registrarProfesor(
         edad--;
       }
 
-      if (fechaNac > hoy) {
-        errores.fechaNac = ["La fecha de nacimiento no puede estar en el futuro."];
-      } else if (edad < 18) {
+      if (edad < 18) {
         errores.fechaNac = ["El profesor debe ser mayor de 18 años."];
       }
     }
@@ -96,11 +96,10 @@ export async function registrarProfesor(
   const fechaNac = new Date(fechaNacStr);
 
   try {
-    // La contraseña por defecto es el DNI
-    // NOTA: En un entorno real se debe hacer hash de la contraseña (ej. con bcrypt)
-    const password = dniStr;
+    // La contraseña inicial es vacía para forzar su creación mediante el enlace
+    const password = "";
 
-    await prisma.usuario.create({
+    const nuevoUsuario = await prisma.usuario.create({
       data: {
         dni,
         nombre,
@@ -112,6 +111,21 @@ export async function registrarProfesor(
         activo: true,
       },
     });
+
+    // Generar token persistente para la creación de la contraseña inicial
+    const token = randomBytes(32).toString("hex");
+    const expiresAt = new Date("9999-12-31T23:59:59.999Z");
+
+    await prisma.passwordResetToken.create({
+      data: {
+        token,
+        expiresAt,
+        usuarioId: nuevoUsuario.id,
+      },
+    });
+
+    // Enviar correo
+    await sendInitialPasswordEmail(email, token);
   } catch (error) {
     console.error("Error al registrar profesor:", error);
     return {
