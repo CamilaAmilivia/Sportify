@@ -1,10 +1,11 @@
 import CalendarioSemanal from '@/components/ui/CalendarioSemanal'
 import { DetalleClase } from './detalle-clase'
 import { getClasesSemana } from './actions'
-import { format, addMinutes } from 'date-fns'
+import { format, addMinutes, addDays, startOfWeek } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ResumenInscripcion } from './resumen'
 import { ToastInscripcion } from "@/components/ui/ToastInscripcion";
+import { obtenerPronosticoSemana } from '@/lib/clima'
 
 type Props = {
   searchParams: Promise<{ claseId?: string; vista?: string; semana?: string ; tipoPago?: string}>
@@ -42,6 +43,10 @@ if (claseId) {
 
   const fechaBase = semana ? new Date(semana + 'T12:00:00') : new Date()
   const clases = await getClasesSemana(fechaBase)
+
+  const inicioSemana = startOfWeek(fechaBase, { weekStartsOn: 1 })
+  const finSemana = addDays(inicioSemana, 6)
+  const clima = await obtenerPronosticoSemana(inicioSemana, finSemana)
   const actividades = clases.map((clase) => {
     const horaFin = addMinutes(clase.fechaHora, clase.duracionMin)
     const dia = format(clase.fechaHora, 'EEEE', { locale: es })
@@ -64,7 +69,7 @@ if (claseId) {
   return (
     <>
     <ToastInscripcion />
-    <CalendarioSemanal actividades={actividades} /> 
+    <CalendarioSemanal actividades={actividades} clima={clima} />
     </>
   )
 }

@@ -6,6 +6,7 @@ import { useState, useMemo } from 'react'
 import { format, startOfWeek, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { Actividad, DiaSemana } from './types'
+import type { PronosticoDia } from '@/lib/clima'
 import Link from 'next/link'  // ← este import va arriba del archivo, no acá
 
 // ─── Datos de ejemplo ────────────────────────────────────────────────────────
@@ -284,9 +285,13 @@ interface CalendarioSemanalProps {
    * En producción, pasá las actividades desde tu Server Component usando Prisma.
    */
   actividades?: Actividad[]
+  /**
+   * Pronóstico del clima por día, indexado por fecha "yyyy-MM-dd".
+   */
+  clima?: Record<string, PronosticoDia>
 }
 
-export default function CalendarioSemanal({ actividades = [] }: CalendarioSemanalProps) {
+export default function CalendarioSemanal({ actividades = [], clima = {} }: CalendarioSemanalProps) {
   const [semanaBase, setSemanaBase] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const router = useRouter()
   const [actividadSeleccionada, setActividadSeleccionada] = useState<Actividad | null>(null)
@@ -443,9 +448,17 @@ const irHoy = () => {
                       : 'bg-white text-slate-700 border-b border-slate-100'}
                   `}
                 >
-                  <p className="font-bold text-sm tracking-wide uppercase">{dia}</p>
+                  <p className="font-bold text-sm tracking-wide uppercase flex items-center justify-center gap-1.5">
+                    {dia}
+                    {clima[format(fecha, 'yyyy-MM-dd')]?.icono && (
+                      <span aria-hidden>{clima[format(fecha, 'yyyy-MM-dd')].icono}</span>
+                    )}
+                  </p>
                   <p className={`text-xs mt-1 font-medium ${esHoy ? 'text-blue-100' : 'text-slate-400'}`}>
                     {format(fecha, "d MMM", { locale: es })}
+                    {clima[format(fecha, 'yyyy-MM-dd')] && (
+                      <> · {clima[format(fecha, 'yyyy-MM-dd')].temperaturaMax}°</>
+                    )}
                   </p>
                 </div>
 
