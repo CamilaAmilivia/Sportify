@@ -402,13 +402,13 @@ const irHoy = () => {
           </div>
 
           {/* Filtro por día (pills) */}
-          <div className="flex gap-4 flex-wrap justify-center border-t border-slate-100 pt-5 w-full max-w-3xl mx-auto">
+          <div className="flex gap-5 flex-wrap justify-center border-t border-slate-100 pt-6 w-full max-w-5xl mx-auto">
             {(['Todos', ...DIAS] as const).map((d) => (
               <button
                 key={d}
                 onClick={() => setFiltroDia(d)}
                 className={`
-                  px-6 py-3 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-150
+                  px-7 py-3.5 rounded-full text-base font-semibold whitespace-nowrap transition-all duration-150
                   ${filtroDia === d
                     ? 'bg-blue-600 text-white shadow-md scale-105'
                     : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'}
