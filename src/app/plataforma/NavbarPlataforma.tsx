@@ -34,6 +34,27 @@ export default function NavbarPlataforma({
       .catch(() => {});
   }, [pathname]);
 
+  useEffect(() => {
+    if (!menuAbierto && !notificacionAbierta) {
+      return;
+    }
+
+    function handleClickFuera(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+
+      if (!target.closest("[data-menu-cuenta]")) {
+        setMenuAbierto(false);
+      }
+
+      if (!target.closest("[data-menu-notificacion]")) {
+        setNotificacionAbierta(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickFuera);
+    return () => document.removeEventListener("mousedown", handleClickFuera);
+  }, [menuAbierto, notificacionAbierta]);
+
   const dropdownNotificacion = notificacionAbierta && notificacionCupoLiberado && (
     <div
       style={{
@@ -255,7 +276,7 @@ export default function NavbarPlataforma({
             position: "relative",
           }}
         >
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative" }} data-menu-notificacion>
             <button
               type="button"
               aria-label="Notificaciones"
@@ -288,7 +309,7 @@ export default function NavbarPlataforma({
             {dropdownNotificacion}
           </div>
 
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative" }} data-menu-cuenta>
             <button
               type="button"
               onClick={() => setMenuAbierto((v) => !v)}
@@ -344,7 +365,7 @@ export default function NavbarPlataforma({
             />
           </div>
 
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative" }} data-menu-notificacion>
             <button
               type="button"
               aria-label="Notificaciones"
@@ -409,6 +430,7 @@ export default function NavbarPlataforma({
               position: "relative",
               borderBottom: "1px solid rgba(0,0,0,0.06)",
             }}
+            data-menu-cuenta
           >
             <button
               type="button"

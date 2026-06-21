@@ -72,3 +72,32 @@ export async function cancelarInscripcion(inscripcionId: number) {
   revalidatePath("/plataforma/mis-clases");
   revalidatePath("/plataforma/cronograma");
 }
+
+export async function cancelarListaEspera(listaEsperaId: number) {
+  const usuario = await requerirUsuarioActual();
+
+  const entrada = await prisma.listaEspera.findUnique({
+    where: { id: listaEsperaId },
+  });
+
+  if (!entrada || entrada.usuarioId !== usuario.id) {
+    throw new Error("No se encontró tu lugar en la lista de espera.");
+  }
+
+  await prisma.listaEspera.delete({
+    where: { id: listaEsperaId },
+  });
+
+  await prisma.listaEspera.updateMany({
+    where: {
+      claseId: entrada.claseId,
+      posicion: { gt: entrada.posicion },
+    },
+    data: {
+      posicion: { decrement: 1 },
+    },
+  });
+
+  revalidatePath("/plataforma/mis-clases");
+  revalidatePath("/plataforma/cronograma");
+}

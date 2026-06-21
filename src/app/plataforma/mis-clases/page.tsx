@@ -8,6 +8,7 @@ import { es } from "date-fns/locale";
 import { BotonAsistencia } from "./BotonAsistencia";
 import { BotonEscanearCliente } from "./BotonEscanearCliente";
 import { BotonCancelarInscripcion } from "./BotonCancelarInscripcion";
+import { BotonCancelarListaEspera } from "./BotonCancelarListaEspera";
 
 export const metadata = {
   title: "Mis clases — Sportify",
@@ -207,6 +208,7 @@ export default async function PaginaMisClases() {
                     fechaHora={espera.clase.fechaHora}
                     estado={`Posición ${espera.posicion}`}
                     duracionMin={espera.clase.duracionMin}
+                    listaEsperaId={espera.id}
                   />
                 ))}
               </div>
@@ -349,6 +351,7 @@ function ClaseListItem({
   claseId,
   duracionMin,
   inscripcionId,
+  listaEsperaId,
 }: {
   titulo: string;
   disciplina: string;
@@ -357,6 +360,7 @@ function ClaseListItem({
   claseId?: number;
   duracionMin?: number;
   inscripcionId?: number;
+  listaEsperaId?: number;
 }) {
   let inicioVentana, finVentana, finClase;
   if (duracionMin !== undefined) {
@@ -421,6 +425,10 @@ function ClaseListItem({
 
         {inscripcionId && estado === "Confirmada" && (
           <BotonCancelarInscripcion inscripcionId={inscripcionId} />
+        )}
+
+        {listaEsperaId && (
+          <BotonCancelarListaEspera listaEsperaId={listaEsperaId} />
         )}
 
       </div>
