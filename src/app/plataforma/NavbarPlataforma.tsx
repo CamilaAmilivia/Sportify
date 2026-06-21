@@ -28,10 +28,14 @@ export default function NavbarPlataforma({
   const pathname = usePathname();
   const itemsNavegacion = navegacionPorRol[usuario.rol];
 
-  useEffect(() => {
+  function refrescarNotificacion() {
     verificarNotificacionCupoLiberado()
       .then(setNotificacionCupoLiberado)
       .catch(() => {});
+  }
+
+  useEffect(() => {
+    refrescarNotificacion();
   }, [pathname]);
 
   useEffect(() => {
@@ -237,6 +241,7 @@ export default function NavbarPlataforma({
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={refrescarNotificacion}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -407,6 +412,7 @@ export default function NavbarPlataforma({
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={refrescarNotificacion}
                 style={{
                   display: "block",
                   padding: "16px 24px",
