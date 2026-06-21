@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { BotonAsistencia } from "./BotonAsistencia";
 import { BotonEscanearCliente } from "./BotonEscanearCliente";
+import { BotonCancelarInscripcion } from "./BotonCancelarInscripcion";
 
 export const metadata = {
   title: "Mis clases — Sportify",
@@ -161,6 +162,7 @@ export default async function PaginaMisClases() {
                     estado="Confirmada"
                     claseId={insc.clase.id}
                     duracionMin={insc.clase.duracionMin}
+                    inscripcionId={insc.id}
                   />
                 ))}
               </div>
@@ -346,6 +348,7 @@ function ClaseListItem({
   estado,
   claseId,
   duracionMin,
+  inscripcionId,
 }: {
   titulo: string;
   disciplina: string;
@@ -353,6 +356,7 @@ function ClaseListItem({
   estado: string;
   claseId?: number;
   duracionMin?: number;
+  inscripcionId?: number;
 }) {
   let inicioVentana, finVentana, finClase;
   if (duracionMin !== undefined) {
@@ -413,6 +417,10 @@ function ClaseListItem({
             inicioVentana={inicioVentana}
             finVentana={finVentana}
           />
+        )}
+
+        {inscripcionId && estado === "Confirmada" && (
+          <BotonCancelarInscripcion inscripcionId={inscripcionId} />
         )}
 
       </div>

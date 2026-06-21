@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requerirUsuarioActual } from "@/lib/sesion";
+import { BotonListaEspera } from "./BotonListaEspera";
 
 type DetalleClaseProps = {
   claseId: number;
@@ -19,6 +20,11 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
       inscripciones: {
         where: {
           estado: "ACTIVA",
+        },
+      },
+      listaEspera: {
+        where: {
+          usuarioId: usuario.id,
         },
       },
     },
@@ -48,6 +54,7 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
   const ocupados = clase.inscripciones.length;
   const disponibles = clase.cupoMaximo - ocupados;
   const sinCupo = disponibles <= 0;
+  const yaEnListaEspera = clase.listaEspera.length > 0;
 
   return (
     <>
@@ -194,6 +201,26 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
           >
             Inscribirme
           </Link>
+        )}
+
+        {usuario.rol === "CLIENTE" && sinCupo && !yaEnListaEspera && (
+          <BotonListaEspera claseId={clase.id} />
+        )}
+
+        {usuario.rol === "CLIENTE" && sinCupo && yaEnListaEspera && (
+          <div
+            style={{
+              marginTop: 24,
+              textAlign: "center",
+              borderRadius: 10,
+              padding: "14px 16px",
+              background: "#fef9c3",
+              color: "#854d0e",
+              fontWeight: 700,
+            }}
+          >
+            ✓ Ya estás en la lista de espera (posición {clase.listaEspera[0].posicion})
+          </div>
         )}
       </section>
     </>

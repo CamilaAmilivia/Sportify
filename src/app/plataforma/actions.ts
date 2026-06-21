@@ -3,11 +3,23 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requerirUsuarioActual } from "@/lib/sesion";
+import { obtenerNotificacionCupoLiberado } from "@/lib/notificaciones";
 
 export async function cerrarSesion() {
   const cookieStore = await cookies();
   cookieStore.delete("sportify_session");
   redirect("/login");
+}
+
+export async function verificarNotificacionCupoLiberado() {
+  const usuario = await requerirUsuarioActual();
+
+  if (usuario.rol !== "CLIENTE") {
+    return null;
+  }
+
+  return obtenerNotificacionCupoLiberado(usuario.id);
 }
 
 export type CrearClaseErrores = {

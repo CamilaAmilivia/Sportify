@@ -43,6 +43,34 @@ export async function sendPasswordResetEmail(to: string, token: string) {
   await transporter.sendMail(mailOptions);
 }
 
+export async function sendListaEsperaPromocionEmail(
+  to: string,
+  claseTitulo: string,
+  claseFechaHora: Date
+) {
+  const fechaTexto = claseFechaHora.toLocaleString("es-AR", {
+    dateStyle: "long",
+    timeStyle: "short",
+  });
+
+  if (!smtpHost || !smtpUser) {
+    console.log("=========================================");
+    console.log(`No se configuró SMTP. Se liberó un cupo para ${to} en "${claseTitulo}" (${fechaTexto}).`);
+    console.log("=========================================");
+    return;
+  }
+
+  const mailOptions = {
+    from: smtpFrom,
+    to,
+    subject: "¡Se liberó un cupo para tu clase! — Sportify",
+    text: `Se liberó un cupo en "${claseTitulo}" (${fechaTexto}) y sos el primero en la lista de espera. Ingresá a Sportify y confirmá tu inscripción (con el pago correspondiente) antes de que se ocupe.`,
+    html: `<p>Se liberó un cupo en <strong>${claseTitulo}</strong> (${fechaTexto}) y sos el primero en la lista de espera. Ingresá a Sportify y confirmá tu inscripción (con el pago correspondiente) antes de que se ocupe.</p>`,
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
 export async function sendInitialPasswordEmail(to: string, token: string) {
   const setupUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/crear-password?token=${token}`;
 

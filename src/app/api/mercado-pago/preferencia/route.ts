@@ -198,7 +198,7 @@ if (fechaDisponible.getTime() !== clase.fechaHora.getTime()) {
       },
     });
 
-    if (yaInscripto) {
+    if (yaInscripto?.estado === "ACTIVA") {
       return NextResponse.json(
         { error: "Ya estás inscripta en esta clase" },
         { status: 400 }
