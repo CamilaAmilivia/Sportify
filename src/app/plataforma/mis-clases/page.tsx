@@ -9,6 +9,7 @@ import { BotonAsistencia } from "./BotonAsistencia";
 import { BotonEscanearCliente } from "./BotonEscanearCliente";
 import { BotonCancelarInscripcion } from "./BotonCancelarInscripcion";
 import { BotonCancelarListaEspera } from "./BotonCancelarListaEspera";
+import { BotonConfirmarInscripcion } from "./BotonConfirmarInscripcion";
 
 export const metadata = {
   title: "Mis clases — Sportify",
@@ -83,7 +84,16 @@ export default async function PaginaMisClases() {
         clase: { fechaHora: { gt: limiteInferior }, estado: "ACTIVA" },
       },
       orderBy: { clase: { fechaHora: "asc" } },
-      include: { clase: { include: { disciplina: true } } },
+      include: { 
+        clase: { 
+          include: { 
+            disciplina: true,
+            _count: {
+              select: { inscripciones: { where: { estado: "ACTIVA" } } }
+            }
+          } 
+        } 
+      },
     });
 
     const fechaProxima = proximaConfirmada
@@ -200,17 +210,27 @@ export default async function PaginaMisClases() {
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 12 }}
               >
-                {pendientes.map((espera) => (
-                  <ClaseListItem
-                    key={espera.id}
-                    titulo={espera.clase.titulo}
-                    disciplina={espera.clase.disciplina.nombre}
-                    fechaHora={espera.clase.fechaHora}
-                    estado={`Posición ${espera.posicion}`}
-                    duracionMin={espera.clase.duracionMin}
-                    listaEsperaId={espera.id}
-                  />
-                ))}
+                {pendientes.map((espera) => {
+                  const cuposLibres = espera.clase.cupoMaximo - espera.clase._count.inscripciones;
+                  const faltanMs = espera.clase.fechaHora.getTime() - ahora.getTime();
+                  const esElegible = cuposLibres > 0 && espera.posicion <= cuposLibres && faltanMs > 24 * 60 * 60 * 1000;
+
+                  return (
+                    <ClaseListItem
+                      key={espera.id}
+                      titulo={espera.clase.titulo}
+                      disciplina={espera.clase.disciplina.nombre}
+                      fechaHora={espera.clase.fechaHora}
+                      estado={`Posición ${espera.posicion}`}
+                      duracionMin={espera.clase.duracionMin}
+                      listaEsperaId={espera.id}
+                      claseId={espera.claseId}
+                      usuarioId={usuario.id}
+                      tipoListaEspera={espera.tipo}
+                      mostrarBotonConfirmar={esElegible}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
@@ -352,6 +372,9 @@ function ClaseListItem({
   duracionMin,
   inscripcionId,
   listaEsperaId,
+  usuarioId,
+  tipoListaEspera,
+  mostrarBotonConfirmar,
 }: {
   titulo: string;
   disciplina: string;
@@ -361,6 +384,9 @@ function ClaseListItem({
   duracionMin?: number;
   inscripcionId?: number;
   listaEsperaId?: number;
+  usuarioId?: number;
+  tipoListaEspera?: "ABONADO" | "CLASE_INDIVIDUAL";
+  mostrarBotonConfirmar?: boolean;
 }) {
   let inicioVentana, finVentana, finClase;
   if (duracionMin !== undefined) {
@@ -429,6 +455,15 @@ function ClaseListItem({
 
         {listaEsperaId && (
           <BotonCancelarListaEspera listaEsperaId={listaEsperaId} />
+        )}
+
+        {listaEsperaId && mostrarBotonConfirmar && claseId && usuarioId && tipoListaEspera && (
+          <BotonConfirmarInscripcion 
+            listaEsperaId={listaEsperaId}
+            claseId={claseId}
+            usuarioId={usuarioId}
+            tipo={tipoListaEspera}
+          />
         )}
 
       </div>
