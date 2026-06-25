@@ -55,7 +55,6 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
   const disponibles = clase.cupoMaximo - ocupados;
   const sinCupo = disponibles <= 0;
   const yaEnListaEspera = clase.listaEspera.length > 0;
-  const yaInscripto = clase.inscripciones.some((insc) => insc.usuarioId === usuario.id);
 
   return (
     <>
@@ -184,23 +183,7 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
             : `✓ Hay ${disponibles} cupos disponibles`}
         </div>
 
-        {usuario.rol === "CLIENTE" && yaInscripto && (
-          <div
-            style={{
-              marginTop: 24,
-              textAlign: "center",
-              borderRadius: 10,
-              padding: "14px 16px",
-              background: "#dcfce7",
-              color: "#166534",
-              fontWeight: 700,
-            }}
-          >
-            ✓ Ya estás inscripto en esta clase
-          </div>
-        )}
-
-        {usuario.rol === "CLIENTE" && !yaInscripto && (
+        {usuario.rol === "CLIENTE" && (
           <Link
             href={`/plataforma/cronograma?claseId=${clase.id}&vista=resumen&tipoPago=CLASE_INDIVIDUAL`}
             style={{
@@ -220,11 +203,11 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
           </Link>
         )}
 
-        {usuario.rol === "CLIENTE" && sinCupo && !yaEnListaEspera && !yaInscripto && (
+        {usuario.rol === "CLIENTE" && sinCupo && !yaEnListaEspera && (
           <BotonListaEspera claseId={clase.id} />
         )}
 
-        {usuario.rol === "CLIENTE" && sinCupo && yaEnListaEspera && !yaInscripto && (
+        {usuario.rol === "CLIENTE" && sinCupo && yaEnListaEspera && (
           <div
             style={{
               marginTop: 24,
