@@ -75,6 +75,19 @@ export async function anotarseListaEspera(claseId: number) {
     throw new Error('Ya estás inscripto en esta clase.')
   }
 
+  const pagoPendientePropio = await prisma.pago.findFirst({
+    where: {
+      usuarioId: usuario.id,
+      claseId,
+      estado: 'PENDIENTE',
+      reservaHasta: { gt: new Date() },
+    },
+  })
+
+  if (pagoPendientePropio) {
+    throw new Error('Ya tenés un pago en proceso para esta clase. Esperá a que se confirme o venza antes de anotarte en la lista de espera.')
+  }
+
   const yaEnListaEspera = await prisma.listaEspera.findUnique({
     where: { usuarioId_claseId: { usuarioId: usuario.id, claseId } },
   })
