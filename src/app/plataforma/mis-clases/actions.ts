@@ -2,8 +2,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { requerirUsuarioActual } from "@/lib/sesion";
-import { sendListaEsperaPromocionEmail } from "@/lib/mail";
-import { obtenerInfoCancelacion } from "@/lib/penalizaciones";
+import {
+  obtenerInfoCancelacion,
+  aplicarPenalizacionPorCancelacion,
+} from "@/lib/penalizaciones";
+import { notificarElegiblesListaEspera } from "@/lib/listaEspera";
 import { revalidatePath } from "next/cache";
 
 export async function obtenerConfirmacionCancelacion(inscripcionId: number) {
@@ -18,10 +21,7 @@ export async function obtenerConfirmacionCancelacion(inscripcionId: number) {
     throw new Error("No se encontró la inscripción.");
   }
 
-  const { penalizaciones, recargosFuturos } = await obtenerInfoCancelacion({
-    usuarioId: usuario.id,
-    claseId: inscripcion.claseId,
-  });
+  const penalizacion = await obtenerInfoCancelacion(inscripcionId);
 
   return {
     clase: {
@@ -29,8 +29,7 @@ export async function obtenerConfirmacionCancelacion(inscripcionId: number) {
       disciplina: inscripcion.clase.disciplina.nombre,
       fechaHora: inscripcion.clase.fechaHora,
     },
-    penalizaciones,
-    recargosFuturos,
+    penalizacion,
   };
 }
 
@@ -50,24 +49,14 @@ export async function cancelarInscripcion(inscripcionId: number) {
     throw new Error("Esta inscripción ya está cancelada.");
   }
 
+  await aplicarPenalizacionPorCancelacion(inscripcionId);
+
   await prisma.inscripcion.update({
     where: { id: inscripcionId },
     data: { estado: "CANCELADA" },
   });
 
-  const primeroEnEspera = await prisma.listaEspera.findFirst({
-    where: { claseId: inscripcion.claseId },
-    orderBy: { posicion: "asc" },
-    include: { usuario: true },
-  });
-
-  if (primeroEnEspera) {
-    await sendListaEsperaPromocionEmail(
-      primeroEnEspera.usuario.email,
-      inscripcion.clase.titulo,
-      inscripcion.clase.fechaHora
-    );
-  }
+  await notificarElegiblesListaEspera(inscripcion.claseId);
 
   revalidatePath("/plataforma/mis-clases");
   revalidatePath("/plataforma/cronograma");

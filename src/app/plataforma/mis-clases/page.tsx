@@ -9,6 +9,7 @@ import { BotonAsistencia } from "./BotonAsistencia";
 import { BotonEscanearCliente } from "./BotonEscanearCliente";
 import { BotonCancelarInscripcion } from "./BotonCancelarInscripcion";
 import { BotonCancelarListaEspera } from "./BotonCancelarListaEspera";
+import { obtenerCreditosDisponibles } from "@/lib/creditos";
 
 export const metadata = {
   title: "Mis clases — Sportify",
@@ -90,6 +91,8 @@ export default async function PaginaMisClases() {
       ? format(proximaConfirmada.clase.fechaHora, "dd/MM HH:mm", { locale: es })
       : "-";
 
+    const creditosDisponibles = await obtenerCreditosDisponibles(usuario.id);
+
     return (
       <>
         <TituloPagina
@@ -114,6 +117,11 @@ export default async function PaginaMisClases() {
             titulo="Ausencias (30 días)"
             valor={String(ausencias)}
             icono="⚠️"
+          />
+          <TarjetaEstadistica
+            titulo="Clases gratis disponibles"
+            valor={String(creditosDisponibles)}
+            icono="🎁"
           />
         </section>
 

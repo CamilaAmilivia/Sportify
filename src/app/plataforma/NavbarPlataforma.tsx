@@ -89,7 +89,7 @@ export default function NavbarPlataforma({
         ). Confirmá tu inscripción antes de que se ocupe.
       </p>
       <Link
-        href={`/plataforma/cronograma?claseId=${notificacionCupoLiberado.claseId}&vista=resumen&tipoPago=CLASE_INDIVIDUAL`}
+        href={`/plataforma/cronograma?claseId=${notificacionCupoLiberado.claseId}&vista=resumen&tipoPago=CLASE_INDIVIDUAL&origen=listaEspera`}
         onClick={() => setNotificacionAbierta(false)}
         style={{
           display: "block",

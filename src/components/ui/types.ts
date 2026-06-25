@@ -12,4 +12,10 @@ export interface Actividad {
   inscriptos: number
   color?: string       // clase tailwind de color, ej: "bg-blue-500"
   salon?: string
+  /**
+   * Cupos realmente disponibles para el público, restando los reservados
+   * por la lista de espera. Si no se pasa, se calcula con
+   * capacidadMaxima - inscriptos.
+   */
+  disponiblesReales?: number
 }

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { limpiarNotificacionesVencidas } from "@/lib/listaEspera";
 
 export type NotificacionCupoLiberado = {
   claseId: number;
@@ -20,12 +21,14 @@ export async function obtenerNotificacionCupoLiberado(
       continue;
     }
 
-    const primero = await prisma.listaEspera.findFirst({
-      where: { claseId: entrada.claseId },
-      orderBy: { posicion: "asc" },
+    await limpiarNotificacionesVencidas(entrada.claseId);
+
+    const entradaActual = await prisma.listaEspera.findUnique({
+      where: { id: entrada.id },
     });
 
-    if (primero?.usuarioId !== usuarioId) {
+    if (!entradaActual) {
+      // Se le venció la prioridad y fue removido de la lista.
       continue;
     }
 
@@ -33,7 +36,9 @@ export async function obtenerNotificacionCupoLiberado(
       where: { claseId: entrada.claseId, estado: "ACTIVA" },
     });
 
-    if (ocupados < entrada.clase.cupoMaximo) {
+    const libres = entrada.clase.cupoMaximo - ocupados;
+
+    if (libres > 0 && entradaActual.posicion <= libres) {
       return {
         claseId: entrada.clase.id,
         titulo: entrada.clase.titulo,

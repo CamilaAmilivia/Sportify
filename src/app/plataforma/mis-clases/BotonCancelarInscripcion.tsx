@@ -6,10 +6,7 @@ import {
   cancelarInscripcion,
   obtenerConfirmacionCancelacion,
 } from "./actions";
-import type {
-  PenalizacionCancelacion,
-  RecargoFuturo,
-} from "@/lib/penalizaciones";
+import type { PenalizacionCancelacion } from "@/lib/penalizaciones";
 
 type DatosConfirmacion = {
   clase: {
@@ -17,8 +14,7 @@ type DatosConfirmacion = {
     disciplina: string;
     fechaHora: Date;
   };
-  penalizaciones: PenalizacionCancelacion[];
-  recargosFuturos: RecargoFuturo[];
+  penalizacion: PenalizacionCancelacion | null;
 };
 
 export function BotonCancelarInscripcion({
@@ -139,7 +135,7 @@ export function BotonCancelarInscripcion({
                   })}
                 </p>
 
-                {datos.penalizaciones.length > 0 && (
+                {datos.penalizacion ? (
                   <div
                     style={{
                       background: "#fef2f2",
@@ -149,38 +145,16 @@ export function BotonCancelarInscripcion({
                     }}
                   >
                     <strong style={{ color: "#b91c1c", fontSize: "0.9rem" }}>
-                      Penalizaciones por esta cancelación
+                      {datos.penalizacion.titulo}
                     </strong>
-                    <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
-                      {datos.penalizaciones.map((p, i) => (
-                        <li key={i} style={{ fontSize: "0.85rem", color: "#7f1d1d", marginBottom: 6 }}>
-                          <strong>{p.titulo}:</strong> {p.descripcion}
-                        </li>
-                      ))}
-                    </ul>
+                    <p style={{ margin: "6px 0 0", fontSize: "0.85rem", color: "#7f1d1d" }}>
+                      {datos.penalizacion.descripcion}
+                    </p>
                   </div>
-                )}
-
-                {datos.recargosFuturos.length > 0 && (
-                  <div
-                    style={{
-                      background: "#fff7ed",
-                      border: "1px solid #fed7aa",
-                      borderRadius: 10,
-                      padding: 14,
-                    }}
-                  >
-                    <strong style={{ color: "#c2410c", fontSize: "0.9rem" }}>
-                      Posibles recargos futuros
-                    </strong>
-                    <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
-                      {datos.recargosFuturos.map((r, i) => (
-                        <li key={i} style={{ fontSize: "0.85rem", color: "#9a3412", marginBottom: 6 }}>
-                          <strong>{r.titulo}:</strong> {r.descripcion}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                ) : (
+                  <p style={{ margin: 0, color: "#6b7280", fontSize: "0.9rem" }}>
+                    ¿Estás seguro/a que querés cancelar tu inscripción? Esta acción no se puede deshacer.
+                  </p>
                 )}
               </>
             )}

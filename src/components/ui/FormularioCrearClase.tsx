@@ -133,8 +133,10 @@ export function FormularioCrearClase({
 
     if (result.success) {
       setMensajeExito(`Se creó la serie de clases ${formData.titulo} exitosamente para el horario ${formData.horaInicio} a ${formData.horaFin}.`);
-      onSuccess();
       setCargando(false);
+      setTimeout(() => {
+        onSuccess();
+      }, 2000);
     } else if (result.errores) {
       setErrores(result.errores as CrearClaseErrores);
       setCargando(false);
@@ -476,9 +478,29 @@ export function FormularioCrearClase({
                   maxWidth: "100%",
                   lineHeight: 1.4,
                   textAlign: "left",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
                 }}
               >
-                {mensajeExito}
+                <span
+                  style={{
+                    width: 16,
+                    height: 16,
+                    marginTop: 2,
+                    flexShrink: 0,
+                    borderRadius: "50%",
+                    border: "2px solid #bbf7d0",
+                    borderTopColor: "#166534",
+                    animation: "girar-spinner 0.7s linear infinite",
+                  }}
+                />
+                <style>{`
+                  @keyframes girar-spinner {
+                    to { transform: rotate(360deg); }
+                  }
+                `}</style>
+                <span>{mensajeExito}</span>
                 <button
                   type="button"
                   onClick={() => setMensajeExito(null)}

@@ -139,8 +139,12 @@ interface TarjetaActividadProps {
 
 function TarjetaActividad({ actividad }: { actividad: Actividad }) {
   const c = colorDe(actividad.color)
-  const lleno = actividad.inscriptos >= actividad.capacidadMaxima
-  const pct = porcentajeLleno(actividad.inscriptos, actividad.capacidadMaxima)
+  const lleno =
+    actividad.disponiblesReales !== undefined
+      ? actividad.disponiblesReales <= 0
+      : actividad.inscriptos >= actividad.capacidadMaxima
+  const inscriptosAMostrar = lleno ? actividad.capacidadMaxima : actividad.inscriptos
+  const pct = lleno ? 100 : porcentajeLleno(actividad.inscriptos, actividad.capacidadMaxima)
 
   return (
     <Link
@@ -176,7 +180,7 @@ function TarjetaActividad({ actividad }: { actividad: Actividad }) {
       {/* Barra de capacidad */}
       <div className="mt-2.5">
         <div className="flex justify-between text-[11px] text-slate-400 mb-1">
-          <span>{actividad.inscriptos}/{actividad.capacidadMaxima} inscriptos</span>
+          <span>{inscriptosAMostrar}/{actividad.capacidadMaxima} inscriptos</span>
           <span>{pct}%</span>
         </div>
         <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
@@ -198,8 +202,12 @@ interface ModalActividadProps {
 
 function ModalActividad({ actividad, onCerrar }: ModalActividadProps) {
   const c = colorDe(actividad.color)
-  const lleno = actividad.inscriptos >= actividad.capacidadMaxima
-  const pct = porcentajeLleno(actividad.inscriptos, actividad.capacidadMaxima)
+  const lleno =
+    actividad.disponiblesReales !== undefined
+      ? actividad.disponiblesReales <= 0
+      : actividad.inscriptos >= actividad.capacidadMaxima
+  const inscriptosAMostrar = lleno ? actividad.capacidadMaxima : actividad.inscriptos
+  const pct = lleno ? 100 : porcentajeLleno(actividad.inscriptos, actividad.capacidadMaxima)
 
   return (
     // Fondo oscuro — posición normal-flow para no colapsar el iframe
@@ -247,7 +255,7 @@ function ModalActividad({ actividad, onCerrar }: ModalActividadProps) {
           <div className="rounded-lg bg-slate-50 p-3">
             <div className="flex justify-between text-xs text-slate-400 mb-1">
               <span>Capacidad</span>
-              <span>{actividad.inscriptos}/{actividad.capacidadMaxima} ({pct}%)</span>
+              <span>{inscriptosAMostrar}/{actividad.capacidadMaxima} ({pct}%)</span>
             </div>
             <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
               <div

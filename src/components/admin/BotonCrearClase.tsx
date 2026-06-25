@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { FormularioCrearClase } from "../ui/FormularioCrearClase";
 
 type BotonCrearClaseProps = {
@@ -19,6 +20,7 @@ export function BotonCrearClase({
   profesores,
 }: BotonCrearClaseProps) {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const router = useRouter();
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -82,7 +84,7 @@ export function BotonCrearClase({
           onClose={() => setMostrarFormulario(false)}
           onSuccess={() => {
             setMostrarFormulario(false);
-            window.location.reload();
+            router.refresh();
           }}
         />
       )}

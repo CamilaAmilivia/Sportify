@@ -10,6 +10,7 @@ import {
   PRECIO_ABONO_MENSUAL,
   TIPOS_PAGO,
 } from "@/lib/pagos";
+import { obtenerRecargoVigente } from "@/lib/penalizaciones";
 
 export async function POST(request: Request) {
   try {
@@ -252,6 +253,46 @@ if (fechaDisponible.getTime() !== clase.fechaHora.getTime()) {
       );
     }
 
+    if (tipoPago === TIPOS_PAGO.CLASE_INDIVIDUAL) {
+      const librestotal = clase.cupoMaximo - lugaresOcupados;
+
+      const miEntradaListaEspera = await prisma.listaEspera.findUnique({
+        where: {
+          usuarioId_claseId: {
+            usuarioId,
+            claseId: clase.id,
+          },
+        },
+      });
+
+      let permitido: boolean;
+
+      if (miEntradaListaEspera) {
+        permitido = miEntradaListaEspera.posicion <= librestotal;
+      } else {
+        const enEspera = await prisma.listaEspera.count({
+          where: { claseId: clase.id },
+        });
+        permitido = librestotal - enEspera > 0;
+      }
+
+      if (!permitido) {
+        return NextResponse.json(
+          {
+            error:
+              "Esta clase tiene lista de espera. Anotate para confirmar tu lugar cuando se libere un cupo.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    const recargoVigente = await obtenerRecargoVigente(usuarioId, tipoPago);
+
+    if (recargoVigente) {
+      montoAPagar = montoAPagar * (1 + recargoVigente.porcentaje / 100);
+    }
+
     const reservaHasta = new Date(Date.now() + 15 * 60 * 1000);
 
     const pago = await prisma.pago.create({
@@ -263,6 +304,7 @@ if (fechaDisponible.getTime() !== clase.fechaHora.getTime()) {
         tipo: tipoPago,
         externalReference: `sportify-pago-${crypto.randomUUID()}`,
         reservaHasta,
+        penalizacionId: recargoVigente?.id,
       },
     });
 

@@ -2,6 +2,9 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requerirUsuarioActual } from "@/lib/sesion";
 import { BotonListaEspera } from "./BotonListaEspera";
+import { BotonUsarCredito } from "./BotonUsarCredito";
+import { obtenerCuposDisponiblesPublico } from "@/lib/listaEspera";
+import { obtenerCreditosDisponibles } from "@/lib/creditos";
 
 type DetalleClaseProps = {
   claseId: number;
@@ -52,9 +55,19 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
   }
 
   const ocupados = clase.inscripciones.length;
-  const disponibles = clase.cupoMaximo - ocupados;
-  const sinCupo = disponibles <= 0;
-  const yaEnListaEspera = clase.listaEspera.length > 0;
+  const librestotal = clase.cupoMaximo - ocupados;
+
+  const disponibles = await obtenerCuposDisponiblesPublico(clase.id);
+
+  const miEntradaListaEspera = clase.listaEspera[0] ?? null;
+  const elegibleAhora =
+    !!miEntradaListaEspera && miEntradaListaEspera.posicion <= librestotal && librestotal > 0;
+
+  const sinCupo = elegibleAhora ? false : disponibles <= 0;
+  const yaEnListaEspera = !!miEntradaListaEspera && !elegibleAhora;
+
+  const creditosDisponibles =
+    usuario.rol === "CLIENTE" ? await obtenerCreditosDisponibles(usuario.id) : 0;
 
   return (
     <>
@@ -180,7 +193,9 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
         >
           {sinCupo
             ? "No hay cupos disponibles"
-            : `✓ Hay ${disponibles} cupos disponibles`}
+            : elegibleAhora
+              ? "✓ Tenés un cupo reservado por tu lugar en la lista de espera"
+              : `✓ Hay ${disponibles} cupos disponibles`}
         </div>
 
         {usuario.rol === "CLIENTE" && (
@@ -201,6 +216,10 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
           >
             Inscribirme
           </Link>
+        )}
+
+        {usuario.rol === "CLIENTE" && !sinCupo && creditosDisponibles > 0 && (
+          <BotonUsarCredito claseId={clase.id} creditosDisponibles={creditosDisponibles} />
         )}
 
         {usuario.rol === "CLIENTE" && sinCupo && !yaEnListaEspera && (

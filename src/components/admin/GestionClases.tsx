@@ -264,6 +264,7 @@ export function GestionClases({
           profesores={profesores}
           onClose={() => setMostrarFormulario(false)}
           onSuccess={() => {
+            setMostrarFormulario(false);
             router.refresh();
             fetchClases(); // Refrescar las clases del lado del cliente
           }}

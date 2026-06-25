@@ -78,6 +78,13 @@ export async function POST(request: Request) {
         return;
       }
 
+      if (pagoActual.penalizacionId) {
+        await tx.penalizacion.update({
+          where: { id: pagoActual.penalizacionId },
+          data: { aplicada: true },
+        });
+      }
+
       if (!pagoActual.claseId) {
         return;
       }
@@ -268,12 +275,30 @@ export async function POST(request: Request) {
         },
       });
 
-      await tx.listaEspera.deleteMany({
+      const entradaListaEspera = await tx.listaEspera.findUnique({
         where: {
-          usuarioId: pagoActual.usuarioId,
-          claseId: pagoActual.claseId,
+          usuarioId_claseId: {
+            usuarioId: pagoActual.usuarioId,
+            claseId: pagoActual.claseId,
+          },
         },
       });
+
+      if (entradaListaEspera) {
+        await tx.listaEspera.delete({
+          where: { id: entradaListaEspera.id },
+        });
+
+        await tx.listaEspera.updateMany({
+          where: {
+            claseId: pagoActual.claseId,
+            posicion: { gt: entradaListaEspera.posicion },
+          },
+          data: {
+            posicion: { decrement: 1 },
+          },
+        });
+      }
 
       await tx.pago.update({
         where: {
