@@ -37,6 +37,7 @@ if (claseId && vista === 'resumen') {
 if (claseId) {
   return (
     <div style={{ padding: '32px 40px' }}>
+      <ToastInscripcion />
       <DetalleClase claseId={Number(claseId)} />
     </div>
   )

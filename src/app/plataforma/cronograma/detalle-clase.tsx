@@ -55,7 +55,12 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
   }
 
   const ocupados = clase.inscripciones.length;
-  const librestotal = clase.cupoMaximo - ocupados;
+
+  const reservasPendientes = await prisma.pago.count({
+    where: { claseId: clase.id, estado: "PENDIENTE", reservaHasta: { gt: new Date() } },
+  });
+
+  const librestotal = clase.cupoMaximo - ocupados - reservasPendientes;
 
   const disponibles = await obtenerCuposDisponiblesPublico(clase.id);
 

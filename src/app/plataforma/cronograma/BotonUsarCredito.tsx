@@ -21,7 +21,7 @@ export function BotonUsarCredito({
 
     try {
       await inscribirseConCredito(claseId);
-      router.refresh();
+      router.push(`/plataforma/cronograma?claseId=${claseId}&toast=credito-ok`);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "No se pudo usar el crédito de clase gratis."

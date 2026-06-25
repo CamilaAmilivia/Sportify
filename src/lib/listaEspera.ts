@@ -49,10 +49,22 @@ export async function renumerarListaEspera(claseId: number) {
   );
 }
 
+async function contarLugaresOcupados(claseId: number) {
+  const ocupados = await prisma.inscripcion.count({
+    where: { claseId, estado: "ACTIVA" },
+  });
+
+  const reservasPendientes = await prisma.pago.count({
+    where: { claseId, estado: "PENDIENTE", reservaHasta: { gt: new Date() } },
+  });
+
+  return ocupados + reservasPendientes;
+}
+
 /**
  * Calcula cuántos cupos quedan realmente disponibles para el público en
  * general, reservando lugares para las personas que ya están en la lista
- * de espera (en orden de prioridad).
+ * de espera (en orden de prioridad) y para pagos pendientes en curso.
  */
 export async function obtenerCuposDisponiblesPublico(claseId: number) {
   const clase = await prisma.clase.findUnique({ where: { id: claseId } });
@@ -63,11 +75,7 @@ export async function obtenerCuposDisponiblesPublico(claseId: number) {
 
   await limpiarNotificacionesVencidas(claseId);
 
-  const ocupados = await prisma.inscripcion.count({
-    where: { claseId, estado: "ACTIVA" },
-  });
-
-  const libres = clase.cupoMaximo - ocupados;
+  const libres = clase.cupoMaximo - (await contarLugaresOcupados(claseId));
 
   if (libres <= 0) {
     return 0;
@@ -92,11 +100,7 @@ export async function notificarElegiblesListaEspera(claseId: number) {
 
   await limpiarNotificacionesVencidas(claseId);
 
-  const ocupados = await prisma.inscripcion.count({
-    where: { claseId, estado: "ACTIVA" },
-  });
-
-  const libres = clase.cupoMaximo - ocupados;
+  const libres = clase.cupoMaximo - (await contarLugaresOcupados(claseId));
 
   if (libres <= 0) {
     return;
