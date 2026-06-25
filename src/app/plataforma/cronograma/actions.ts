@@ -60,11 +60,6 @@ export async function anotarseListaEspera(claseId: number) {
     throw new Error('La clase no existe.')
   }
 
-  const faltanMs = clase.fechaHora.getTime() - Date.now()
-  if (faltanMs < 24 * 60 * 60 * 1000) {
-    throw new Error('No puedes anotarte en la lista de espera faltando menos de 24 horas para la clase.')
-  }
-
   if (clase._count.inscripciones < clase.cupoMaximo) {
     throw new Error('La clase todavía tiene cupos disponibles.')
   }
