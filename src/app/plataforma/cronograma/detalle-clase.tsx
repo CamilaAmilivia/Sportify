@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requerirUsuarioActual } from "@/lib/sesion";
+import { BotonListaEspera } from "./BotonListaEspera";
+import { BotonUsarCredito } from "./BotonUsarCredito";
+import { obtenerCuposDisponiblesPublico } from "@/lib/listaEspera";
+import { obtenerCreditosDisponibles } from "@/lib/creditos";
 
 type DetalleClaseProps = {
   claseId: number;
@@ -19,6 +23,11 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
       inscripciones: {
         where: {
           estado: "ACTIVA",
+        },
+      },
+      listaEspera: {
+        where: {
+          usuarioId: usuario.id,
         },
       },
     },
@@ -46,8 +55,24 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
   }
 
   const ocupados = clase.inscripciones.length;
-  const disponibles = clase.cupoMaximo - ocupados;
-  const sinCupo = disponibles <= 0;
+
+  const reservasPendientes = await prisma.pago.count({
+    where: { claseId: clase.id, estado: "PENDIENTE", reservaHasta: { gt: new Date() } },
+  });
+
+  const librestotal = clase.cupoMaximo - ocupados - reservasPendientes;
+
+  const disponibles = await obtenerCuposDisponiblesPublico(clase.id);
+
+  const miEntradaListaEspera = clase.listaEspera[0] ?? null;
+  const elegibleAhora =
+    !!miEntradaListaEspera && miEntradaListaEspera.posicion <= librestotal && librestotal > 0;
+
+  const sinCupo = elegibleAhora ? false : disponibles <= 0;
+  const yaEnListaEspera = !!miEntradaListaEspera && !elegibleAhora;
+
+  const creditosDisponibles =
+    usuario.rol === "CLIENTE" ? await obtenerCreditosDisponibles(usuario.id) : 0;
 
   return (
     <>
@@ -173,7 +198,9 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
         >
           {sinCupo
             ? "No hay cupos disponibles"
-            : `✓ Hay ${disponibles} cupos disponibles`}
+            : elegibleAhora
+              ? "✓ Tenés un cupo reservado por tu lugar en la lista de espera"
+              : `✓ Hay ${disponibles} cupos disponibles`}
         </div>
 
         {usuario.rol === "CLIENTE" && (
@@ -194,6 +221,30 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
           >
             Inscribirme
           </Link>
+        )}
+
+        {usuario.rol === "CLIENTE" && !sinCupo && creditosDisponibles > 0 && (
+          <BotonUsarCredito claseId={clase.id} creditosDisponibles={creditosDisponibles} />
+        )}
+
+        {usuario.rol === "CLIENTE" && sinCupo && !yaEnListaEspera && (
+          <BotonListaEspera claseId={clase.id} />
+        )}
+
+        {usuario.rol === "CLIENTE" && sinCupo && yaEnListaEspera && (
+          <div
+            style={{
+              marginTop: 24,
+              textAlign: "center",
+              borderRadius: 10,
+              padding: "14px 16px",
+              background: "#fef9c3",
+              color: "#854d0e",
+              fontWeight: 700,
+            }}
+          >
+            ✓ Ya estás en la lista de espera (posición {clase.listaEspera[0].posicion})
+          </div>
         )}
       </section>
     </>

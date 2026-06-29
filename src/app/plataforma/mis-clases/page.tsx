@@ -7,6 +7,9 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { BotonAsistencia } from "./BotonAsistencia";
 import { BotonEscanearCliente } from "./BotonEscanearCliente";
+import { BotonCancelarInscripcion } from "./BotonCancelarInscripcion";
+import { BotonCancelarListaEspera } from "./BotonCancelarListaEspera";
+import { obtenerCreditosDisponibles } from "@/lib/creditos";
 
 export const metadata = {
   title: "Mis clases — Sportify",
@@ -88,6 +91,8 @@ export default async function PaginaMisClases() {
       ? format(proximaConfirmada.clase.fechaHora, "dd/MM HH:mm", { locale: es })
       : "-";
 
+    const creditosDisponibles = await obtenerCreditosDisponibles(usuario.id);
+
     return (
       <>
         <TituloPagina
@@ -112,6 +117,11 @@ export default async function PaginaMisClases() {
             titulo="Ausencias (30 días)"
             valor={String(ausencias)}
             icono="⚠️"
+          />
+          <TarjetaEstadistica
+            titulo="Clases gratis disponibles"
+            valor={String(creditosDisponibles)}
+            icono="🎁"
           />
         </section>
 
@@ -161,6 +171,7 @@ export default async function PaginaMisClases() {
                     estado="Confirmada"
                     claseId={insc.clase.id}
                     duracionMin={insc.clase.duracionMin}
+                    inscripcionId={insc.id}
                   />
                 ))}
               </div>
@@ -205,6 +216,7 @@ export default async function PaginaMisClases() {
                     fechaHora={espera.clase.fechaHora}
                     estado={`Posición ${espera.posicion}`}
                     duracionMin={espera.clase.duracionMin}
+                    listaEsperaId={espera.id}
                   />
                 ))}
               </div>
@@ -346,6 +358,8 @@ function ClaseListItem({
   estado,
   claseId,
   duracionMin,
+  inscripcionId,
+  listaEsperaId,
 }: {
   titulo: string;
   disciplina: string;
@@ -353,6 +367,8 @@ function ClaseListItem({
   estado: string;
   claseId?: number;
   duracionMin?: number;
+  inscripcionId?: number;
+  listaEsperaId?: number;
 }) {
   let inicioVentana, finVentana, finClase;
   if (duracionMin !== undefined) {
@@ -413,6 +429,14 @@ function ClaseListItem({
             inicioVentana={inicioVentana}
             finVentana={finVentana}
           />
+        )}
+
+        {inscripcionId && estado === "Confirmada" && (
+          <BotonCancelarInscripcion inscripcionId={inscripcionId} />
+        )}
+
+        {listaEsperaId && (
+          <BotonCancelarListaEspera listaEsperaId={listaEsperaId} />
         )}
 
       </div>

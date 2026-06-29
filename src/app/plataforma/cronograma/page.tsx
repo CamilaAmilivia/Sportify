@@ -1,13 +1,15 @@
 import CalendarioSemanal from '@/components/ui/CalendarioSemanal'
 import { DetalleClase } from './detalle-clase'
 import { getClasesSemana } from './actions'
-import { format, addMinutes } from 'date-fns'
+import { format, addMinutes, addDays, startOfWeek } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ResumenInscripcion } from './resumen'
 import { ToastInscripcion } from "@/components/ui/ToastInscripcion";
+import { obtenerPronosticoSemana } from '@/lib/clima'
+import { obtenerCuposDisponiblesPublico } from '@/lib/listaEspera'
 
 type Props = {
-  searchParams: Promise<{ claseId?: string; vista?: string; semana?: string ; tipoPago?: string}>
+  searchParams: Promise<{ claseId?: string; vista?: string; semana?: string ; tipoPago?: string; origen?: string }>
 }
 
 const COLORES_POR_DISCIPLINA: Record<string, string> = {
@@ -22,12 +24,12 @@ const COLORES_POR_DISCIPLINA: Record<string, string> = {
 
 export default async function CronogramaPage({ searchParams }: Props) {
 
-  const { claseId, vista, semana , tipoPago} = await searchParams
+  const { claseId, vista, semana , tipoPago, origen} = await searchParams
 
 if (claseId && vista === 'resumen') {
   return (
     <div style={{ padding: '32px 40px' }}>
-      <ResumenInscripcion claseId={Number(claseId)} tipoPago={tipoPago} />
+      <ResumenInscripcion claseId={Number(claseId)} tipoPago={tipoPago} origen={origen} />
     </div>
   )
 }
@@ -35,6 +37,7 @@ if (claseId && vista === 'resumen') {
 if (claseId) {
   return (
     <div style={{ padding: '32px 40px' }}>
+      <ToastInscripcion />
       <DetalleClase claseId={Number(claseId)} />
     </div>
   )
@@ -42,29 +45,38 @@ if (claseId) {
 
   const fechaBase = semana ? new Date(semana + 'T12:00:00') : new Date()
   const clases = await getClasesSemana(fechaBase)
-  const actividades = clases.map((clase) => {
-    const horaFin = addMinutes(clase.fechaHora, clase.duracionMin)
-    const dia = format(clase.fechaHora, 'EEEE', { locale: es })
-    const diaCapitalizado = (dia.charAt(0).toUpperCase() + dia.slice(1)) as 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo'
 
-    return {
-      id:              clase.id,
-      nombre:          clase.titulo,
-      descripcion:     clase.descripcion ?? undefined,
-      instructor:      `${clase.profesor.nombre} ${clase.profesor.apellido}`,
-      dia:             diaCapitalizado,
-      horaInicio:      format(clase.fechaHora, 'HH:mm'),
-      horaFin:         format(horaFin, 'HH:mm'),
-      capacidadMaxima: clase.cupoMaximo,
-      inscriptos:      clase._count.inscripciones,
-      color:           COLORES_POR_DISCIPLINA[clase.disciplina.nombre] ?? 'blue',
-    }
-  })
+  const inicioSemana = startOfWeek(fechaBase, { weekStartsOn: 1 })
+  const finSemana = addDays(inicioSemana, 6)
+  const clima = await obtenerPronosticoSemana(inicioSemana, finSemana)
+  const actividades = await Promise.all(
+    clases.map(async (clase) => {
+      const horaFin = addMinutes(clase.fechaHora, clase.duracionMin)
+      const dia = format(clase.fechaHora, 'EEEE', { locale: es })
+      const diaCapitalizado = (dia.charAt(0).toUpperCase() + dia.slice(1)) as 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo'
+
+      const disponiblesReales = await obtenerCuposDisponiblesPublico(clase.id)
+
+      return {
+        id:                clase.id,
+        nombre:            clase.titulo,
+        descripcion:       clase.descripcion ?? undefined,
+        instructor:        `${clase.profesor.nombre} ${clase.profesor.apellido}`,
+        dia:               diaCapitalizado,
+        horaInicio:        format(clase.fechaHora, 'HH:mm'),
+        horaFin:           format(horaFin, 'HH:mm'),
+        capacidadMaxima:   clase.cupoMaximo,
+        inscriptos:        clase._count.inscripciones,
+        color:             COLORES_POR_DISCIPLINA[clase.disciplina.nombre] ?? 'blue',
+        disponiblesReales,
+      }
+    })
+  )
 
   return (
     <>
     <ToastInscripcion />
-    <CalendarioSemanal actividades={actividades} /> 
+    <CalendarioSemanal actividades={actividades} clima={clima} />
     </>
   )
 }
