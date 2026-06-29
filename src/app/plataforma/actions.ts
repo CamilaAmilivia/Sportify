@@ -17,7 +17,6 @@ export type CrearClaseErrores = {
   fechaInicio?: string[];
   fechaFin?: string[];
   horaInicio?: string[];
-  horaFin?: string[];
   disciplinaId?: string[];
   cupoMaximo?: string[];
   precio?: string[];
@@ -31,7 +30,6 @@ export async function crearClase(formData: {
   fechaInicio?: string;
   fechaFin?: string;
   horaInicio: string;
-  horaFin: string;
   disciplinaId: number;
   cupoMaximo: number;
   precio?: number;
@@ -44,7 +42,6 @@ export async function crearClase(formData: {
     if (!formData.profesorId || isNaN(formData.profesorId)) errores.profesorId = ["Debes seleccionar un profesor"];
     if (formData.diaSemana === undefined || formData.diaSemana < 0 || formData.diaSemana > 6) errores.diaSemana = ["El día de la semana es requerido"];
     if (!formData.horaInicio) errores.horaInicio = ["La hora de inicio es requerida"];
-    if (!formData.horaFin) errores.horaFin = ["La hora de fin es requerida"];
     if (!formData.cupoMaximo || formData.cupoMaximo <= 0) {
       errores.cupoMaximo = ["El cupo máximo debe ser mayor a 0"];
     }
@@ -84,23 +81,23 @@ export async function crearClase(formData: {
 
     let fechaInicio: Date | null = null;
     let fechaLimite: Date | null = null;
-    let duracionMin = 0;
+    const duracionMin = 60;
     let horaInicioH = 0;
     let horaInicioM = 0;
-    let horaFinH = 0;
-    let horaFinM = 0;
 
     // Procesar fecha y hora
-    if (!errores.diaSemana && !errores.horaInicio && !errores.horaFin) {
+    if (!errores.diaSemana && !errores.horaInicio) {
       [horaInicioH, horaInicioM] = formData.horaInicio.split(":").map(Number);
-      [horaFinH, horaFinM] = formData.horaFin.split(":").map(Number);
-      
-      const inicioMin = horaInicioH * 60 + horaInicioM;
-      const finMin = horaFinH * 60 + horaFinM;
-      duracionMin = finMin - inicioMin;
+      const horaValida =
+        Number.isInteger(horaInicioH) &&
+        Number.isInteger(horaInicioM) &&
+        horaInicioH >= 0 &&
+        horaInicioH <= 23 &&
+        horaInicioM >= 0 &&
+        horaInicioM <= 59;
 
-      if (duracionMin <= 0) {
-        errores.horaFin = ["La hora de fin debe ser posterior a la hora de inicio"];
+      if (!horaValida) {
+        errores.horaInicio = ["La hora de inicio debe tener formato HH:MM"];
       }
 
       const hoy = new Date();
@@ -138,37 +135,86 @@ export async function crearClase(formData: {
       return { errores };
     }
 
+    const obtenerClasesSuperpuestas = async (inicioClase: Date) => {
+      const finClase = new Date(inicioClase.getTime() + duracionMin * 60000);
+      const inicioDia = new Date(inicioClase);
+      inicioDia.setHours(0, 0, 0, 0);
+
+      const finDia = new Date(inicioClase);
+      finDia.setHours(23, 59, 59, 999);
+
+      const clasesDelDia = await prisma.clase.findMany({
+        where: {
+          estado: "ACTIVA",
+          fechaHora: {
+            gte: inicioDia,
+            lte: finDia,
+          },
+        },
+        include: {
+          disciplina: true,
+        },
+      });
+
+      return clasesDelDia.filter((clase) => {
+        const inicioExistente = new Date(clase.fechaHora);
+        const finExistente = new Date(clase.fechaHora);
+        finExistente.setMinutes(finExistente.getMinutes() + clase.duracionMin);
+
+        return inicioClase < finExistente && finClase > inicioExistente;
+      });
+    };
+
+    const calcularCuposOcupadosEnPeriodo = (
+      clases: Awaited<ReturnType<typeof obtenerClasesSuperpuestas>>,
+      inicioClase: Date
+    ) => {
+      const finClase = new Date(inicioClase.getTime() + duracionMin * 60000);
+      const puntosDeControl = [
+        inicioClase,
+        ...clases.flatMap((clase) => {
+          const inicioExistente = new Date(clase.fechaHora);
+          const finExistente = new Date(clase.fechaHora);
+          finExistente.setMinutes(finExistente.getMinutes() + clase.duracionMin);
+          return [inicioExistente, finExistente];
+        }),
+      ].filter((punto) => punto >= inicioClase && punto < finClase);
+
+      return puntosDeControl.reduce((maximo, punto) => {
+        const cuposEnPunto = clases.reduce((total, clase) => {
+          const inicioExistente = new Date(clase.fechaHora);
+          const finExistente = new Date(clase.fechaHora);
+          finExistente.setMinutes(finExistente.getMinutes() + clase.duracionMin);
+
+          if (inicioExistente <= punto && finExistente > punto) {
+            return total + clase.cupoMaximo;
+          }
+
+          return total;
+        }, 0);
+
+        return Math.max(maximo, cuposEnPunto);
+      }, 0);
+    };
+
     // ============= NUEVAS VALIDACIONES =============
 
     // Validación 0: Verificar que el profesor no tenga otra clase en el mismo horario
-    const claseDelProfesorEnHorario = await prisma.clase.findFirst({
-      where: {
-        profesorId: formData.profesorId,
-        fechaHora: fechaInicio,
-        estado: "ACTIVA",
-      },
-    });
+    const clasesSuperpuestasIniciales = await obtenerClasesSuperpuestas(fechaInicio);
+    const claseDelProfesorEnHorario = clasesSuperpuestasIniciales.find(
+      (clase) => clase.profesorId === formData.profesorId
+    );
 
     if (claseDelProfesorEnHorario) {
       errores.profesorId = [
-        `${profesorEncontrado.nombre} ya tiene una clase asignada el ${fechaInicio.getDate().toString().padStart(2, '0')}/${(fechaInicio.getMonth()+1).toString().padStart(2, '0')}/${fechaInicio.getFullYear()} en el horario ${formData.horaInicio} - ${formData.horaFin}`,
+        `${profesorEncontrado.nombre} ya tiene una clase asignada el ${fechaInicio.getDate().toString().padStart(2, '0')}/${(fechaInicio.getMonth()+1).toString().padStart(2, '0')}/${fechaInicio.getFullYear()} a las ${formData.horaInicio}`,
       ];
     }
 
     // Buscar clases existentes para el MISMO HORARIO (mismo inicio)
-    const clasesEnMismoHorario = await prisma.clase.findMany({
-      where: {
-        fechaHora: fechaInicio,
-        estado: "ACTIVA",
-      },
-      include: {
-        disciplina: true,
-      },
-    });
-
     // Validación 1: No más de 3 disciplinas diferentes en el mismo horario
     const disciplinasEnHorario = new Set(
-      clasesEnMismoHorario.map((c) => c.disciplina.nombre)
+      clasesSuperpuestasIniciales.map((c) => c.disciplina.nombre)
     );
 
     if (disciplinasEnHorario.size >= 3 && !disciplinasEnHorario.has(disciplinaActual.nombre)) {
@@ -178,9 +224,9 @@ export async function crearClase(formData: {
     }
 
     // Validación 2: Suma total de cupos no puede exceder 30
-    const cuposActuales = clasesEnMismoHorario.reduce(
-      (sum, clase) => sum + clase.cupoMaximo,
-      0
+    const cuposActuales = calcularCuposOcupadosEnPeriodo(
+      clasesSuperpuestasIniciales,
+      fechaInicio
     );
 
     const cuposTotales = cuposActuales + formData.cupoMaximo;
@@ -210,9 +256,6 @@ export async function crearClase(formData: {
 
     while (fechaActual <= fechaLimite) {
 
-      const fechaFinActual = new Date(fechaActual);
-      fechaFinActual.setHours(horaFinH, horaFinM, 0, 0);
-
       // ================= VALIDACIONES =================
 
       // Profesor ocupado
@@ -235,8 +278,7 @@ export async function crearClase(formData: {
 
       const nuevaInicio = new Date(fechaActual);
 
-      const nuevaFin = new Date(fechaActual);
-      nuevaFin.setHours(horaFinH, horaFinM, 0, 0);
+      const nuevaFin = new Date(fechaActual.getTime() + duracionMin * 60000);
 
       const profesorOcupado = clasesProfesor.some((clase) => {
         const existenteInicio = new Date(clase.fechaHora);
@@ -261,25 +303,13 @@ export async function crearClase(formData: {
         continue;
       }
 
-      // Clases en mismo horario
-      const clasesEnHorario = await prisma.clase.findMany({
-        where: {
-          fechaHora: new Date(fechaActual),
-          estado: "ACTIVA",
-        },
-        include: {
-          disciplina: true,
-        },
-      });
+      // Clases que se superponen en cualquier parte de la hora.
+      const clasesEnHorario = await obtenerClasesSuperpuestas(new Date(fechaActual));
 
       // Disciplina repetida
-      const yaExisteDisciplina = await prisma.clase.findFirst({
-        where: {
-          disciplinaId: formData.disciplinaId,
-          estado: "ACTIVA",
-          fechaHora: new Date(fechaActual),
-        },
-      });
+      const yaExisteDisciplina = clasesEnHorario.find(
+        (clase) => clase.disciplinaId === formData.disciplinaId
+      );
 
       if (yaExisteDisciplina) {
         erroresClases.push(
@@ -291,9 +321,9 @@ export async function crearClase(formData: {
       }
 
       // Cupos máximos
-      const cuposActuales = clasesEnHorario.reduce(
-        (sum, clase) => sum + clase.cupoMaximo,
-        0
+      const cuposActuales = calcularCuposOcupadosEnPeriodo(
+        clasesEnHorario,
+        new Date(fechaActual)
       );
 
       const totalCupos = cuposActuales + formData.cupoMaximo;
