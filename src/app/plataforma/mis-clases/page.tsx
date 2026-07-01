@@ -202,20 +202,21 @@ export default async function PaginaMisClases({
               ) : (
                 <>
                   {proximasClases.map((insc, i) => (
-                    <Link
+                    <div
                       key={insc.id}
-                      href={`/plataforma/cronograma?claseId=${insc.clase.id}`}
                       style={{
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
                         padding: "14px 20px",
                         borderTop: i === 0 ? "none" : "1px solid #f3f4f6",
-                        textDecoration: "none",
-                        color: "inherit",
+                        gap: 12,
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <Link
+                        href={`/plataforma/cronograma?claseId=${insc.clase.id}`}
+                        style={{ display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit", flex: 1 }}
+                      >
                         <div style={{ background: "#f0fdf4", borderRadius: 10, padding: "8px 10px", textAlign: "center", minWidth: 48 }}>
                           <p style={{ margin: 0, fontSize: "0.7rem", color: "#16a34a", fontWeight: 700, textTransform: "uppercase" }}>
                             {format(insc.clase.fechaHora, "EEE", { locale: es })}
@@ -231,14 +232,14 @@ export default async function PaginaMisClases({
                             {insc.pago?.tipo === "MENSUALIDAD" ? " · Abono" : insc.pago?.tipo === "CLASE_INDIVIDUAL" ? " · Individual" : " · Clase gratis"}
                           </p>
                         </div>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ background: "#f0fdf4", color: "#16a34a", borderRadius: 20, padding: "3px 12px", fontSize: "0.8rem", fontWeight: 600 }}>
+                        <span style={{ marginLeft: "auto", background: "#f0fdf4", color: "#16a34a", borderRadius: 20, padding: "3px 12px", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}>
                           ✓ Confirmada
                         </span>
-                        <span style={{ color: "#d1d5db", fontSize: "1rem" }}>›</span>
-                      </div>
-                    </Link>
+                      </Link>
+                      {insc.clase.fechaHora >= new Date() && (
+                        <BotonCancelarInscripcion inscripcionId={insc.id} />
+                      )}
+                    </div>
                   ))}
                   <div style={{ padding: "12px 20px", borderTop: "1px solid #f3f4f6", display: "flex", gap: 16 }}>
                     {siguienteRango && (
@@ -264,8 +265,7 @@ export default async function PaginaMisClases({
               {pendientes.length === 0 ? (
                 <div style={{ padding: 28, textAlign: "center" }}>
                   <p style={{ fontSize: "2rem", margin: "0 0 8px" }}>⏳</p>
-                  <p style={{ color: "#6b7280", margin: 0, fontSize: "0.9rem" }}>Estás en lista de espera</p>
-                  <p style={{ color: "#9ca3af", margin: "4px 0 0", fontSize: "0.82rem" }}>Te avisaremos por email si se libera un lugar.</p>
+                  <p style={{ color: "#6b7280", margin: 0, fontSize: "0.9rem" }}>No estás en lista de espera para ninguna clase.</p>
                 </div>
               ) : (
                 pendientes.map((espera, i) => {
@@ -289,7 +289,9 @@ export default async function PaginaMisClases({
                             </p>
                           </div>
                         </div>
-                        <BotonCancelarListaEspera listaEsperaId={espera.id} />
+                        {espera.clase.fechaHora >= new Date() && (
+                          <BotonCancelarListaEspera listaEsperaId={espera.id} />
+                        )}
                       </div>
                       {elegible && (
                         <Link
