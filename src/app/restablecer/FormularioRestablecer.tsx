@@ -302,7 +302,7 @@ export default function FormularioRestablecer() {
         disabled={isPending}
         style={{
           background: "var(--color-green)",
-          color: "var(--color-dark)",
+          color: "var(--color-white)",
           padding: "14px 24px",
           borderRadius: "var(--radius-md)",
           border: "none",
