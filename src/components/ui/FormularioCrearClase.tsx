@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { crearClase, CrearClaseErrores } from "@/app/plataforma/actions";
 
 type FormularioCrearClaseProps = {
@@ -43,7 +43,6 @@ export function FormularioCrearClase({
     personalizarFin: false,
     fechaFin: "",
     horaInicio: "10:00",
-    horaFin: "11:00",
     disciplinaId: disciplinas[0]?.id || 1,
     cupoMaximo: 20,
     precio: "" as unknown as number,
@@ -70,28 +69,35 @@ export function FormularioCrearClase({
     return fechas;
   };
 
-  const proximasFechas = getProximasFechas(Number(formData.diaSemana));
+  const proximasFechas = useMemo(
+    () => getProximasFechas(Number(formData.diaSemana)),
+    [formData.diaSemana]
+  );
 
   useEffect(() => {
     if (formData.personalizarInicio) {
       if (!formData.fechaInicio) {
         // Set to first option by default in format YYYY-MM-DD
         const [dia, mes, anio] = proximasFechas[0].toLocaleDateString("es-AR", { year: "numeric", month: "2-digit", day: "2-digit" }).split("/");
-        setFormData((prev) => ({ ...prev, fechaInicio: `${anio}-${mes}-${dia}` }));
+        void Promise.resolve().then(() =>
+          setFormData((prev) => prev.fechaInicio ? prev : { ...prev, fechaInicio: `${anio}-${mes}-${dia}` })
+        );
       }
-    } else {
-      setFormData((prev) => ({ ...prev, fechaInicio: "" }));
+    } else if (formData.fechaInicio) {
+      void Promise.resolve().then(() =>
+        setFormData((prev) => prev.fechaInicio ? { ...prev, fechaInicio: "" } : prev)
+      );
     }
-  }, [formData.personalizarInicio, formData.diaSemana]);
+  }, [formData.personalizarInicio, formData.fechaInicio, proximasFechas]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     if (mensajeExito) setMensajeExito(null);
     const { name, value, type } = e.target as HTMLInputElement;
 
-    let finalValue: any = value;
+    let finalValue: string | number | boolean = value;
     if (type === "checkbox") {
       finalValue = (e.target as HTMLInputElement).checked;
-    } else if (name === "horaInicio" || name === "horaFin") {
+    } else if (name === "horaInicio") {
       const soloDigitos = value.replace(/[^\d]/g, "");
       if (soloDigitos.length <= 4) {
         finalValue = soloDigitos;
@@ -123,7 +129,6 @@ export function FormularioCrearClase({
       fechaInicio: formData.personalizarInicio ? formData.fechaInicio : undefined,
       fechaFin: formData.personalizarFin ? formData.fechaFin : undefined,
       horaInicio: formData.horaInicio,
-      horaFin: formData.horaFin,
       disciplinaId: Number(formData.disciplinaId),
       cupoMaximo: Number(formData.cupoMaximo),
       precio: Number(formData.precio) || undefined,
@@ -132,7 +137,14 @@ export function FormularioCrearClase({
     const result = await crearClase(datosAEnviar);
 
     if (result.success) {
-      setMensajeExito(`Se creó la serie de clases ${formData.titulo} exitosamente para el horario ${formData.horaInicio} a ${formData.horaFin}.`);
+      const inicio = new Date(`2000-01-01T${formData.horaInicio}:00`);
+      const fin = new Date(inicio.getTime() + 60 * 60000);
+      const horarioFin = fin.toLocaleTimeString("es-AR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      setMensajeExito(`Se creó la serie de clases ${formData.titulo} exitosamente para el horario ${formData.horaInicio} a ${horarioFin}.`);
       setCargando(false);
       setTimeout(() => {
         onSuccess();
@@ -324,7 +336,7 @@ export function FormularioCrearClase({
                       width: "100%", padding: "10px 12px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "0.95rem", boxSizing: "border-box"
                     }}
                   >
-                    {proximasFechas.map((fecha, idx) => {
+                    {proximasFechas.map((fecha) => {
                       const [dia, mes, anio] = fecha.toLocaleDateString("es-AR", { year: "numeric", month: "2-digit", day: "2-digit" }).split("/");
                       const dateStr = `${anio}-${mes}-${dia}`;
                       return (
@@ -378,7 +390,7 @@ export function FormularioCrearClase({
               )}
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
               <div>
                 <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "var(--color-dark)", fontSize: "0.95rem" }}>
                   Hora inicio *
@@ -396,25 +408,9 @@ export function FormularioCrearClase({
                   style={{ width: "100%", padding: "10px 12px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "1rem", boxSizing: "border-box" }}
                 />
                 {errores.horaInicio && <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.horaInicio[0]}</span>}
-              </div>
-
-              <div>
-                <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "var(--color-dark)", fontSize: "0.95rem" }}>
-                  Hora fin *
-                </label>
-                <input
-                  type="text"
-                  name="horaFin"
-                  value={formData.horaFin}
-                  onChange={handleChange}
-                  placeholder="HH:MM"
-                  maxLength={5}
-                  pattern="^([01]\d|2[0-3]):([0-5]\d)$"
-                  title="Formato de 24 horas (ej. 14:30)"
-                  required
-                  style={{ width: "100%", padding: "10px 12px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "1rem", boxSizing: "border-box" }}
-                />
-                {errores.horaFin && <span className="form-error" style={{ display: "block", marginTop: 4 }}>⚠ {errores.horaFin[0]}</span>}
+                <p style={{ fontSize: "0.85rem", color: "var(--color-gray)", margin: "6px 0 0" }}>
+                  Todas las clases duran 1 hora.
+                </p>
               </div>
             </div>
           </div>

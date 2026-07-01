@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { TituloPagina } from "@/components/ui/TituloPagina";
 import { FormularioCrearClase } from "@/components/ui/FormularioCrearClase";
-import { obtenerClasesFiltradas } from "@/app/plataforma/clases/actions";
+import { eliminarClasesSimilares, obtenerClasesFiltradas } from "@/app/plataforma/clases/actions";
 
 type Clase = {
   id: number;
@@ -39,6 +39,9 @@ export function GestionClases({
   
   const [clases, setClases] = useState<Clase[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [claseAEliminar, setClaseAEliminar] = useState<Clase | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
   
   const router = useRouter();
 
@@ -90,7 +93,7 @@ export function GestionClases({
   }, [vistaFiltro, fechaInicioPersonalizada, fechaFinPersonalizada]);
 
   useEffect(() => {
-    fetchClases();
+    void Promise.resolve().then(fetchClases);
   }, [fetchClases]);
 
   const formatearFecha = (fechaString: Date | string) => {
@@ -109,6 +112,31 @@ export function GestionClases({
     
     const options: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
     return `${inicio.toLocaleTimeString("es-AR", options)} a ${fin.toLocaleTimeString("es-AR", options)} h`;
+  };
+
+  const confirmarEliminacion = async () => {
+    if (!claseAEliminar) return;
+
+    setEliminando(true);
+    setErrorEliminar(null);
+
+    try {
+      const resultado = await eliminarClasesSimilares(claseAEliminar.id);
+
+      if (resultado.error) {
+        setErrorEliminar(resultado.error);
+        return;
+      }
+
+      setClaseAEliminar(null);
+      router.refresh();
+      await fetchClases();
+    } catch (error) {
+      console.error("Error eliminando clases:", error);
+      setErrorEliminar("No se pudo eliminar la clase. Intenta nuevamente.");
+    } finally {
+      setEliminando(false);
+    }
   };
 
   return (
@@ -223,6 +251,7 @@ export function GestionClases({
                   <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Profesor</th>
                   <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Fecha</th>
                   <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Horario</th>
+                  <th style={{ padding: "16px 20px", textAlign: "right", color: "var(--color-dark)", fontWeight: "700" }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -250,6 +279,28 @@ export function GestionClases({
                         {formatearHorario(clase.fechaHora, clase.duracionMin)}
                       </span>
                     </td>
+                    <td style={{ padding: "16px 20px", textAlign: "right" }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setClaseAEliminar(clase);
+                          setErrorEliminar(null);
+                        }}
+                        style={{
+                          padding: "10px 14px",
+                          background: "#fee2e2",
+                          color: "#991b1b",
+                          border: "1px solid #fecaca",
+                          borderRadius: 8,
+                          fontSize: "0.875rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Eliminar clase
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -269,6 +320,105 @@ export function GestionClases({
             fetchClases(); // Refrescar las clases del lado del cliente
           }}
         />
+      )}
+
+      {claseAEliminar && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirmar-eliminar-clase"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            zIndex: 1001,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 460,
+              background: "white",
+              borderRadius: 8,
+              padding: "28px",
+              boxShadow: "0 24px 70px rgba(15, 23, 42, 0.25)",
+            }}
+          >
+            <h3
+              id="confirmar-eliminar-clase"
+              style={{
+                margin: "0 0 12px",
+                color: "var(--color-dark)",
+                fontSize: "1.25rem",
+                fontWeight: 800,
+              }}
+            >
+              Eliminar clase
+            </h3>
+            <p style={{ margin: 0, color: "var(--color-gray)", lineHeight: 1.6, fontWeight: 500 }}>
+              Esta seguro que quiere eliminar esta clase? se borraran todas las instancias hasta 31/12/
+              {new Date().getFullYear()}.
+            </p>
+
+            {errorEliminar && (
+              <p
+                style={{
+                  margin: "16px 0 0",
+                  color: "#b91c1c",
+                  background: "#fee2e2",
+                  border: "1px solid #fecaca",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  fontWeight: 600,
+                }}
+              >
+                {errorEliminar}
+              </p>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
+              <button
+                type="button"
+                disabled={eliminando}
+                onClick={() => {
+                  setClaseAEliminar(null);
+                  setErrorEliminar(null);
+                }}
+                style={{
+                  padding: "12px 16px",
+                  background: "#f8fafc",
+                  color: "var(--color-dark)",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  cursor: eliminando ? "not-allowed" : "pointer",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={eliminando}
+                onClick={confirmarEliminacion}
+                style={{
+                  padding: "12px 16px",
+                  background: eliminando ? "#fca5a5" : "#dc2626",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  cursor: eliminando ? "not-allowed" : "pointer",
+                }}
+              >
+                {eliminando ? "Eliminando..." : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
