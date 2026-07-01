@@ -13,6 +13,8 @@ export default function FormularioRestablecer() {
   const [state, formAction, isPending] = useActionState(restablecerContrasena, {});
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [mostrarConfirmPassword, setMostrarConfirmPassword] = useState(false);
 
   const [isValidating, setIsValidating] = useState(true);
   const [isTokenValid, setIsTokenValid] = useState(true);
@@ -159,24 +161,61 @@ export default function FormularioRestablecer() {
         >
           Nueva contraseña
         </label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={{
-            padding: "12px 16px",
-            borderRadius: "var(--radius-md)",
-            border: `1px solid ${state.errores?.password ? "var(--color-red)" : "var(--color-gray-light)"}`,
-            fontSize: "1rem",
-            fontFamily: "inherit",
-            transition: "all 0.2s ease",
-            outline: "none",
-            background: "var(--color-gray-light)",
-          }}
-        />
+        <div style={{ position: "relative" }}>
+          <input
+            type={mostrarPassword ? "text" : "password"}
+            id="password"
+            name="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            style={{
+              padding: "12px 16px",
+              paddingRight: "2.8rem",
+              borderRadius: "var(--radius-md)",
+              border: `1px solid ${state.errores?.password ? "var(--color-red)" : "var(--color-gray-light)"}`,
+              fontSize: "1rem",
+              fontFamily: "inherit",
+              transition: "all 0.2s ease",
+              outline: "none",
+              background: "var(--color-gray-light)",
+              width: "100%",
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => setMostrarPassword((v) => !v)}
+            aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            style={{
+              position: "absolute",
+              right: "0.75rem",
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              lineHeight: 1,
+              fontSize: "1.1rem",
+              color: "var(--color-gray)",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            {mostrarPassword ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            )}
+          </button>
+        </div>
         {state.errores?.password && (
           <span style={{ color: "var(--color-red)", fontSize: "0.85rem" }}>
             {state.errores.password[0]}
@@ -196,24 +235,61 @@ export default function FormularioRestablecer() {
         >
           Confirmar contraseña
         </label>
-        <input
-          type="password"
-          id="confirmPassword"
-          name="confirmPassword"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-          style={{
-            padding: "12px 16px",
-            borderRadius: "var(--radius-md)",
-            border: `1px solid ${state.errores?.confirmPassword ? "var(--color-red)" : "var(--color-gray-light)"}`,
-            fontSize: "1rem",
-            fontFamily: "inherit",
-            transition: "all 0.2s ease",
-            outline: "none",
-            background: "var(--color-gray-light)",
-          }}
-        />
+        <div style={{ position: "relative" }}>
+          <input
+            type={mostrarConfirmPassword ? "text" : "password"}
+            id="confirmPassword"
+            name="confirmPassword"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            style={{
+              padding: "12px 16px",
+              paddingRight: "2.8rem",
+              borderRadius: "var(--radius-md)",
+              border: `1px solid ${state.errores?.confirmPassword ? "var(--color-red)" : "var(--color-gray-light)"}`,
+              fontSize: "1rem",
+              fontFamily: "inherit",
+              transition: "all 0.2s ease",
+              outline: "none",
+              background: "var(--color-gray-light)",
+              width: "100%",
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => setMostrarConfirmPassword((v) => !v)}
+            aria-label={mostrarConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            style={{
+              position: "absolute",
+              right: "0.75rem",
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              lineHeight: 1,
+              fontSize: "1.1rem",
+              color: "var(--color-gray)",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            {mostrarConfirmPassword ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            )}
+          </button>
+        </div>
         {state.errores?.confirmPassword && (
           <span style={{ color: "var(--color-red)", fontSize: "0.85rem" }}>
             {state.errores.confirmPassword[0]}
