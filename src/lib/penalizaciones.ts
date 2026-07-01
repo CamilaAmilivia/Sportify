@@ -6,31 +6,6 @@ const HORAS_LIMITE_ABONO = 48;
 const PORCENTAJE_RECARGO = 30;
 const CANCELACIONES_PARA_RECARGO_ABONO = 3;
 
-export async function obtenerPenalizacionPendiente(usuarioId: number) {
-  const usuario = await prisma.usuario.findUnique({
-    where: {
-      id: usuarioId,
-    },
-    select: {
-      email: true,
-    },
-  });
-
-  /**
-   * MOCK TEMPORAL:
-   * Para probar cómo se vería la penalización en rojo.
-   * Después esto debería venir de una tabla real de penalizaciones.
-   */
-  if (usuario?.email === "cliente@sportify.com") {
-    return {
-      monto: 2500,
-      motivo: "Penalización por inasistencia a una clase reservada",
-    };
-  }
-
-  return null;
-}
-
 export type PenalizacionCancelacion = {
   titulo: string;
   descripcion: string;
@@ -107,7 +82,10 @@ export async function obtenerInfoCancelacion(
   }
 
   if (horas >= HORAS_LIMITE_INDIVIDUAL) {
-    return null;
+    return {
+      titulo: "Reintegro por cancelación",
+      descripcion: `Cancelás "${inscripcion.clase.titulo}" del ${fecha} con más de ${HORAS_LIMITE_INDIVIDUAL}hs de anticipación. El reintegro del importe abonado se realizará en persona en el local.`,
+    };
   }
 
   return {
@@ -195,17 +173,82 @@ export async function obtenerRecargoVigente(
   usuarioId: number,
   tipoCompra: "CLASE_INDIVIDUAL" | "MENSUALIDAD"
 ) {
-  const tipo =
-    tipoCompra === "MENSUALIDAD" ? "RECARGO_ABONO" : "RECARGO_CLASE_INDIVIDUAL";
+  const tipos: ("RECARGO_ABONO" | "RECARGO_CLASE_INDIVIDUAL" | "RECARGO_AUSENCIA_INDIVIDUAL")[] =
+    tipoCompra === "MENSUALIDAD"
+      ? ["RECARGO_ABONO"]
+      : ["RECARGO_CLASE_INDIVIDUAL", "RECARGO_AUSENCIA_INDIVIDUAL"];
 
   return prisma.penalizacion.findFirst({
     where: {
       usuarioId,
-      tipo,
+      tipo: { in: tipos },
       aplicada: false,
     },
     orderBy: { createdAt: "asc" },
   });
+}
+
+/**
+ * Aplica penalización por ausencia a una clase ya finalizada.
+ * Solo se debe llamar cuando Asistencia.presente === false (profesor marcó ausente).
+ * Usa la misma lógica que cancelación tardía según el tipo de pago.
+ * Es idempotente: no aplica dos veces para la misma clase.
+ */
+export async function aplicarPenalizacionPorAusencia(inscripcionId: number) {
+  const inscripcion = await prisma.inscripcion.findUnique({
+    where: { id: inscripcionId },
+    include: { clase: true, pago: true },
+  });
+
+  if (!inscripcion) return;
+
+  const esAbono = inscripcion.pago?.tipo === "MENSUALIDAD";
+  const fecha = formatearFecha(inscripcion.clase.fechaHora);
+  const tipoAusencia = esAbono ? "AVISO_AUSENCIA_ABONO" : "RECARGO_AUSENCIA_INDIVIDUAL";
+
+  const yaAplicada = await prisma.penalizacion.findFirst({
+    where: { usuarioId: inscripcion.usuarioId, claseId: inscripcion.claseId, tipo: tipoAusencia },
+  });
+
+  if (yaAplicada) return;
+
+  if (esAbono) {
+    await prisma.penalizacion.create({
+      data: {
+        usuarioId: inscripcion.usuarioId,
+        claseId: inscripcion.claseId,
+        tipo: "AVISO_AUSENCIA_ABONO",
+        porcentaje: 0,
+        motivo: `Ausencia a "${inscripcion.clase.titulo}" del ${fecha} (abono mensual).`,
+      },
+    });
+
+    const avisosAusencia = await prisma.penalizacion.count({
+      where: { usuarioId: inscripcion.usuarioId, tipo: "AVISO_AUSENCIA_ABONO" },
+    });
+
+    if (avisosAusencia % CANCELACIONES_PARA_RECARGO_ABONO === 0) {
+      await prisma.penalizacion.create({
+        data: {
+          usuarioId: inscripcion.usuarioId,
+          claseId: inscripcion.claseId,
+          tipo: "RECARGO_ABONO",
+          porcentaje: PORCENTAJE_RECARGO,
+          motivo: `Recargo del ${PORCENTAJE_RECARGO}% por acumular ${CANCELACIONES_PARA_RECARGO_ABONO} ausencias en clases de abono (la última, "${inscripcion.clase.titulo}" del ${fecha}).`,
+        },
+      });
+    }
+  } else {
+    await prisma.penalizacion.create({
+      data: {
+        usuarioId: inscripcion.usuarioId,
+        claseId: inscripcion.claseId,
+        tipo: "RECARGO_AUSENCIA_INDIVIDUAL",
+        porcentaje: PORCENTAJE_RECARGO,
+        motivo: `Recargo del ${PORCENTAJE_RECARGO}% por ausencia a "${inscripcion.clase.titulo}" del ${fecha} (clase individual).`,
+      },
+    });
+  }
 }
 
 export async function marcarPenalizacionAplicada(penalizacionId: number) {

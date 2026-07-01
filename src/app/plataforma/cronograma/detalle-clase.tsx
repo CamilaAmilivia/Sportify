@@ -65,14 +65,21 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
   const disponibles = await obtenerCuposDisponiblesPublico(clase.id);
 
   const miEntradaListaEspera = clase.listaEspera[0] ?? null;
+  const ventanaNotificacion = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const elegibleAhora =
-    !!miEntradaListaEspera && miEntradaListaEspera.posicion <= librestotal && librestotal > 0;
+    !!miEntradaListaEspera &&
+    !!miEntradaListaEspera.notificadoEn &&
+    miEntradaListaEspera.notificadoEn > ventanaNotificacion &&
+    miEntradaListaEspera.posicion <= librestotal &&
+    librestotal > 0;
 
   const sinCupo = elegibleAhora ? false : disponibles <= 0;
   const yaEnListaEspera = !!miEntradaListaEspera && !elegibleAhora;
 
   const creditosDisponibles =
     usuario.rol === "CLIENTE" ? await obtenerCreditosDisponibles(usuario.id) : 0;
+
+  const clasePaso = clase.fechaHora < new Date();
 
   return (
     <>
@@ -203,9 +210,25 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
               : `✓ Hay ${disponibles} cupos disponibles`}
         </div>
 
-        {usuario.rol === "CLIENTE" && (
+        {clasePaso && (
+          <div
+            style={{
+              marginTop: 24,
+              textAlign: "center",
+              borderRadius: 10,
+              padding: "14px 16px",
+              background: "#f3f4f6",
+              color: "#6b7280",
+              fontWeight: 600,
+            }}
+          >
+            Esta clase ya finalizó.
+          </div>
+        )}
+
+        {!clasePaso && usuario.rol === "CLIENTE" && (
           <Link
-            href={`/plataforma/cronograma?claseId=${clase.id}&vista=resumen&tipoPago=CLASE_INDIVIDUAL`}
+            href={`/plataforma/cronograma?claseId=${clase.id}&vista=resumen&tipoPago=CLASE_INDIVIDUAL${elegibleAhora ? "&origen=listaEspera" : ""}`}
             style={{
               display: "block",
               textAlign: "center",
@@ -223,15 +246,15 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
           </Link>
         )}
 
-        {usuario.rol === "CLIENTE" && !sinCupo && creditosDisponibles > 0 && (
+        {!clasePaso && usuario.rol === "CLIENTE" && !sinCupo && creditosDisponibles > 0 && (
           <BotonUsarCredito claseId={clase.id} creditosDisponibles={creditosDisponibles} />
         )}
 
-        {usuario.rol === "CLIENTE" && sinCupo && !yaEnListaEspera && (
+        {!clasePaso && usuario.rol === "CLIENTE" && sinCupo && !yaEnListaEspera && (
           <BotonListaEspera claseId={clase.id} />
         )}
 
-        {usuario.rol === "CLIENTE" && sinCupo && yaEnListaEspera && (
+        {!clasePaso && usuario.rol === "CLIENTE" && sinCupo && yaEnListaEspera && (
           <div
             style={{
               marginTop: 24,
