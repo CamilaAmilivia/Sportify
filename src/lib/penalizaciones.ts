@@ -63,10 +63,16 @@ export async function obtenerInfoCancelacion(
       return null;
     }
 
+    const ultimoRecargo = await prisma.penalizacion.findFirst({
+      where: { usuarioId: inscripcion.usuarioId, tipo: "RECARGO_ABONO" },
+      orderBy: { createdAt: "desc" },
+    });
+
     const cancelacionesTardias = await prisma.penalizacion.count({
       where: {
         usuarioId: inscripcion.usuarioId,
         tipo: "AVISO_CANCELACION_TARDIA_ABONO",
+        createdAt: { gt: ultimoRecargo?.createdAt ?? new Date(0) },
       },
     });
 
@@ -128,10 +134,16 @@ export async function aplicarPenalizacionPorCancelacion(inscripcionId: number) {
       },
     });
 
+    const ultimoRecargoAplicado = await prisma.penalizacion.findFirst({
+      where: { usuarioId: inscripcion.usuarioId, tipo: "RECARGO_ABONO" },
+      orderBy: { createdAt: "desc" },
+    });
+
     const cancelacionesTardias = await prisma.penalizacion.count({
       where: {
         usuarioId: inscripcion.usuarioId,
         tipo: "AVISO_CANCELACION_TARDIA_ABONO",
+        createdAt: { gt: ultimoRecargoAplicado?.createdAt ?? new Date(0) },
       },
     });
 

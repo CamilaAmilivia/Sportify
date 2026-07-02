@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cerrarSesion, verificarNotificacionCupoLiberado } from "./actions";
 import type { UsuarioSesion } from "@/tipos/usuario";
 import { navegacionPorRol, nombreRol } from "@/configuracion/navegacion";
@@ -26,16 +26,21 @@ export default function NavbarPlataforma({
     notificacionInicial ?? null
   );
   const pathname = usePathname();
+  const router = useRouter();
   const itemsNavegacion = navegacionPorRol[usuario.rol];
-
-  function refrescarNotificacion() {
-    verificarNotificacionCupoLiberado()
-      .then(setNotificacionCupoLiberado)
-      .catch(() => {});
-  }
+  const notificacionRef = useRef(notificacionInicial ?? null);
 
   useEffect(() => {
-    refrescarNotificacion();
+    verificarNotificacionCupoLiberado()
+      .then((nueva) => {
+        const habiaNotificacion = !!notificacionRef.current;
+        notificacionRef.current = nueva;
+        setNotificacionCupoLiberado(nueva);
+        if (!!nueva && !habiaNotificacion) {
+          router.refresh();
+        }
+      })
+      .catch(() => {});
   }, [pathname]);
 
   useEffect(() => {
@@ -241,7 +246,7 @@ export default function NavbarPlataforma({
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={refrescarNotificacion}
+                  onClick={() => {}}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -412,7 +417,7 @@ export default function NavbarPlataforma({
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={refrescarNotificacion}
+                onClick={() => {}}
                 style={{
                   display: "block",
                   padding: "16px 24px",

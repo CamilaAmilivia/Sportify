@@ -12,26 +12,23 @@ import { BotonCancelarInscripcion } from "./BotonCancelarInscripcion";
 import { BotonCancelarListaEspera } from "./BotonCancelarListaEspera";
 import { obtenerCreditosDisponibles } from "@/lib/creditos";
 import { aplicarPenalizacionPorAusencia } from "@/lib/penalizaciones";
+import { notificarElegiblesListaEspera } from "@/lib/listaEspera";
 
 export const metadata = {
   title: "Mis clases — Sportify",
 };
 
-const RANGOS_DIAS = [7, 14, 30] as const;
-
 type PaginaMisClasesProps = {
-  searchParams: Promise<{ dias?: string }>;
+  searchParams: Promise<{ dias?: string; diasEspera?: string }>;
 };
 
 export default async function PaginaMisClases({
   searchParams,
 }: PaginaMisClasesProps) {
   const usuario = await requerirUsuarioActual();
-  const { dias } = await searchParams;
-  const rangoDias = RANGOS_DIAS.includes(Number(dias) as (typeof RANGOS_DIAS)[number])
-    ? Number(dias)
-    : 7;
-  const siguienteRango = RANGOS_DIAS.find((r) => r > rangoDias);
+  const { dias, diasEspera } = await searchParams;
+  const rangoDias = Math.max(7, Number(dias) || 7);
+  const rangoEspera = Math.max(7, Number(diasEspera) || 7);
 
   if (usuario.rol === "ADMIN") {
     redirect("/plataforma");
@@ -92,13 +89,24 @@ export default async function PaginaMisClases({
       },
     });
 
-    const cancelacionesAbono = await prisma.penalizacion.count({
+    const ultimoRecargoAbono = await prisma.penalizacion.findFirst({
+      where: { usuarioId: usuario.id, tipo: "RECARGO_ABONO" },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const avisosAbonoCicloActual = await prisma.penalizacion.count({
       where: {
         usuarioId: usuario.id,
-        tipo: "RECARGO_ABONO",
-        aplicada: false,
+        tipo: "AVISO_CANCELACION_TARDIA_ABONO",
+        createdAt: { gt: ultimoRecargoAbono?.createdAt ?? new Date(0) },
       },
     });
+
+    const recargoAbonoPendiente = await prisma.penalizacion.count({
+      where: { usuarioId: usuario.id, tipo: "RECARGO_ABONO", aplicada: false },
+    });
+
+    const cancelacionesAbono = recargoAbonoPendiente > 0 ? recargoAbonoPendiente : avisosAbonoCicloActual;
 
     const hoyInicio = new Date(ahora);
     hoyInicio.setHours(0, 0, 0, 0);
@@ -113,14 +121,45 @@ export default async function PaginaMisClases({
       include: { clase: { include: { disciplina: true } }, pago: { select: { tipo: true } } },
     });
 
+    const finRangoEspera = new Date(ahora);
+    finRangoEspera.setDate(finRangoEspera.getDate() + rangoEspera);
+
     const pendientes = await prisma.listaEspera.findMany({
       where: {
         usuarioId: usuario.id,
-        clase: { fechaHora: { gt: limiteInferior }, estado: "ACTIVA" },
+        clase: { fechaHora: { gt: limiteInferior, lte: finRangoEspera }, estado: "ACTIVA" },
       },
       orderBy: { clase: { fechaHora: "asc" } },
       include: { clase: { include: { disciplina: true } } },
     });
+
+    // Auto-notificar elegibles por si la notificación no se envió antes (idempotente)
+    await Promise.all(pendientes.map((e) => notificarElegiblesListaEspera(e.claseId)));
+
+    // Re-fetchear para obtener notificadoEn actualizado
+    const pendientesActualizados = await prisma.listaEspera.findMany({
+      where: {
+        usuarioId: usuario.id,
+        clase: { fechaHora: { gt: limiteInferior, lte: finRangoEspera }, estado: "ACTIVA" },
+      },
+      orderBy: { clase: { fechaHora: "asc" } },
+      include: { clase: { include: { disciplina: true } } },
+    });
+
+    const hayMasEspera = await prisma.listaEspera.count({
+      where: {
+        usuarioId: usuario.id,
+        clase: { fechaHora: { gt: finRangoEspera }, estado: "ACTIVA" },
+      },
+    }) > 0;
+
+    const hayMasClases = await prisma.inscripcion.count({
+      where: {
+        usuarioId: usuario.id,
+        estado: "ACTIVA",
+        clase: { fechaHora: { gt: finRango }, estado: "ACTIVA" },
+      },
+    }) > 0;
 
     const ventanaNotificacion = new Date(ahora.getTime() - 24 * 60 * 60 * 1000);
 
@@ -183,7 +222,7 @@ export default async function PaginaMisClases({
         <p style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 12 }}>Penalizaciones</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 32 }}>
           <StatCard icono="❌" color="#fff1f2" iconColor="#e11d48" titulo="Penalizaciones individuales" valor={cancelacionesIndividual} subtitulo={cancelacionesIndividual === 0 ? "Todo en orden" : "Cancelaciones tardías"} />
-          <StatCard icono="❌" color="#fff1f2" iconColor="#e11d48" titulo="Penalizaciones abono" valor={cancelacionesAbono} subtitulo={cancelacionesAbono === 0 ? "Todo en orden" : "Cancelaciones tardías"} />
+          <StatCard icono="❌" color="#fff1f2" iconColor="#e11d48" titulo="Penalizaciones abono" valor={cancelacionesAbono} subtitulo={recargoAbonoPendiente > 0 ? "Recargo pendiente de pago" : cancelacionesAbono === 0 ? "Todo en orden" : `${avisosAbonoCicloActual} de ${3} avisos`} />
         </div>
 
         {/* Grilla clases + lista de espera */}
@@ -195,13 +234,12 @@ export default async function PaginaMisClases({
               Próximas clases ({rangoDias} días)
             </p>
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden" }}>
-              {proximasClases.length === 0 ? (
+              {proximasClases.length === 0 && (
                 <p style={{ color: "var(--color-gray)", padding: 24, textAlign: "center", margin: 0 }}>
                   No tenés clases en los próximos {rangoDias} días.
                 </p>
-              ) : (
-                <>
-                  {proximasClases.map((insc, i) => (
+              )}
+              {proximasClases.length > 0 && proximasClases.map((insc, i) => (
                     <div
                       key={insc.id}
                       style={{
@@ -227,10 +265,18 @@ export default async function PaginaMisClases({
                         </div>
                         <div>
                           <p style={{ margin: 0, fontWeight: 600, fontSize: "0.95rem" }}>{insc.clase.titulo}</p>
-                          <p style={{ margin: 0, color: "#9ca3af", fontSize: "0.82rem" }}>
-                            {format(insc.clase.fechaHora, "HH:mm")} hs
-                            {insc.pago?.tipo === "MENSUALIDAD" ? " · Abono" : insc.pago?.tipo === "CLASE_INDIVIDUAL" ? " · Individual" : " · Clase gratis"}
-                          </p>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                            <span style={{ color: "#9ca3af", fontSize: "0.82rem" }}>{format(insc.clase.fechaHora, "HH:mm")} hs</span>
+                            {insc.pago?.tipo === "MENSUALIDAD" && (
+                              <span style={{ background: "rgba(168,85,247,0.1)", color: "#7c3aed", padding: "1px 8px", borderRadius: 20, fontSize: "0.75rem", fontWeight: 600 }}>Abono</span>
+                            )}
+                            {insc.pago?.tipo === "CLASE_INDIVIDUAL" && (
+                              <span style={{ background: "rgba(59,130,246,0.1)", color: "#1d4ed8", padding: "1px 8px", borderRadius: 20, fontSize: "0.75rem", fontWeight: 600 }}>Individual</span>
+                            )}
+                            {!insc.pago?.tipo && (
+                              <span style={{ background: "rgba(234,179,8,0.12)", color: "#92400e", padding: "1px 8px", borderRadius: 20, fontSize: "0.75rem", fontWeight: 600 }}>🎁 Clase gratis</span>
+                            )}
+                          </div>
                         </div>
                         <span style={{ marginLeft: "auto", background: "#f0fdf4", color: "#16a34a", borderRadius: 20, padding: "3px 12px", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}>
                           ✓ Confirmada
@@ -240,35 +286,35 @@ export default async function PaginaMisClases({
                         <BotonCancelarInscripcion inscripcionId={insc.id} />
                       )}
                     </div>
-                  ))}
-                  <div style={{ padding: "12px 20px", borderTop: "1px solid #f3f4f6", display: "flex", gap: 16 }}>
-                    {siguienteRango && (
-                      <Link href={`/plataforma/mis-clases?dias=${siguienteRango}`} style={{ color: "#16a34a", fontWeight: 600, fontSize: "0.85rem", textDecoration: "none" }}>
-                        Ver todas →
-                      </Link>
-                    )}
-                    {rangoDias > 7 && (
-                      <Link href="/plataforma/mis-clases" style={{ color: "#9ca3af", fontWeight: 600, fontSize: "0.85rem", textDecoration: "none" }}>
-                        Ver menos
-                      </Link>
-                    )}
-                  </div>
-                </>
+              ))}
+              {(hayMasClases || rangoDias > 7) && (
+                <div style={{ padding: "12px 20px", borderTop: proximasClases.length > 0 ? "1px solid #f3f4f6" : "none", display: "flex", gap: 16 }}>
+                  {hayMasClases && (
+                    <Link href={`/plataforma/mis-clases?dias=${rangoDias + 7}`} style={{ color: "#16a34a", fontWeight: 600, fontSize: "0.85rem", textDecoration: "none" }}>
+                      Ver más →
+                    </Link>
+                  )}
+                  {rangoDias > 7 && (
+                    <Link href={`/plataforma/mis-clases?dias=${rangoDias - 7}`} style={{ color: "#9ca3af", fontWeight: 600, fontSize: "0.85rem", textDecoration: "none" }}>
+                      Ver menos
+                    </Link>
+                  )}
+                </div>
               )}
             </div>
           </div>
 
           {/* Lista de espera */}
           <div>
-            <p style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 12 }}>En lista de espera</p>
+            <p style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 12 }}>En lista de espera ({rangoEspera} días)</p>
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden" }}>
-              {pendientes.length === 0 ? (
+              {pendientesActualizados.length === 0 && (
                 <div style={{ padding: 28, textAlign: "center" }}>
                   <p style={{ fontSize: "2rem", margin: "0 0 8px" }}>⏳</p>
                   <p style={{ color: "#6b7280", margin: 0, fontSize: "0.9rem" }}>No estás en lista de espera para ninguna clase.</p>
                 </div>
-              ) : (
-                pendientes.map((espera, i) => {
+              )}
+              {pendientesActualizados.length > 0 && pendientesActualizados.map((espera, i) => {
                   const elegible = !!espera.notificadoEn && espera.notificadoEn > ventanaNotificacion;
                   return (
                     <div key={espera.id} style={{ padding: "14px 20px", borderTop: i === 0 ? "none" : "1px solid #f3f4f6" }}>
@@ -303,7 +349,20 @@ export default async function PaginaMisClases({
                       )}
                     </div>
                   );
-                })
+                })}
+              {(hayMasEspera || rangoEspera > 7) && (
+                <div style={{ padding: "12px 20px", borderTop: pendientesActualizados.length > 0 ? "1px solid #f3f4f6" : "none", display: "flex", gap: 16 }}>
+                  {hayMasEspera && (
+                    <Link href={`/plataforma/mis-clases?dias=${rangoDias}&diasEspera=${rangoEspera + 7}`} style={{ color: "#16a34a", fontWeight: 600, fontSize: "0.85rem", textDecoration: "none" }}>
+                      Ver más →
+                    </Link>
+                  )}
+                  {rangoEspera > 7 && (
+                    <Link href={`/plataforma/mis-clases?dias=${rangoDias}&diasEspera=${rangoEspera - 7}`} style={{ color: "#9ca3af", fontWeight: 600, fontSize: "0.85rem", textDecoration: "none" }}>
+                      Ver menos
+                    </Link>
+                  )}
+                </div>
               )}
             </div>
           </div>
