@@ -92,3 +92,54 @@ export async function sendInitialPasswordEmail(to: string, token: string) {
 
   await transporter.sendMail(mailOptions);
 }
+
+export async function sendClaseCanceladaEmail(
+  to: string,
+  nombre: string,
+  claseTitulo: string,
+  claseFechaHora: Date,
+  tieneToken: boolean
+) {
+  const fechaTexto = claseFechaHora.toLocaleString("es-AR", {
+    dateStyle: "long",
+    timeStyle: "short",
+  });
+
+  if (!smtpHost || !smtpUser) {
+    console.log("=========================================");
+    console.log(`Clase cancelada para ${to}`);
+    console.log(`${claseTitulo} - ${fechaTexto}`);
+    console.log("=========================================");
+    return;
+  }
+
+  const mensajeToken = tieneToken
+    ? "<p>Como sos abonado, se acreditó un token para compensar la cancelación de la clase.</p>"
+    : "";
+
+  await transporter.sendMail({
+    from: smtpFrom,
+    to,
+    subject: "Cancelación de clase - Sportify",
+    text: `Hola ${nombre}.
+
+La clase "${claseTitulo}" del ${fechaTexto} fue cancelada.
+
+${tieneToken ? "Se acreditó un token para compensar la cancelación." : ""}
+
+Disculpá las molestias.`,
+
+    html: `
+      <p>Hola <strong>${nombre}</strong>.</p>
+
+      <p>Te informamos que la clase
+      <strong>${claseTitulo}</strong>
+      del <strong>${fechaTexto}</strong>
+      fue cancelada.</p>
+
+      ${mensajeToken}
+
+      <p>Disculpá las molestias.</p>
+    `,
+  });
+}

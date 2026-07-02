@@ -137,7 +137,6 @@ export function FormularioCrearClase({
     const result = await crearClase(datosAEnviar);
 
     if (result.success) {
-<<<<<<< HEAD
       const inicio = new Date(`2000-01-01T${formData.horaInicio}:00`);
       const fin = new Date(inicio.getTime() + 60 * 60000);
       const horarioFin = fin.toLocaleTimeString("es-AR", {
@@ -147,9 +146,6 @@ export function FormularioCrearClase({
       });
       setMensajeExito(`Se creó la serie de clases ${formData.titulo} exitosamente para el horario ${formData.horaInicio} a ${horarioFin}.`);
       onSuccess();
-=======
-      setMensajeExito(`Se creó la serie de clases ${formData.titulo} exitosamente para el horario ${formData.horaInicio} a ${formData.horaFin}.`);
->>>>>>> 98eac44095bbf269727e4c93ab21d7bb33b899f6
       setCargando(false);
       setTimeout(() => {
         onSuccess();
