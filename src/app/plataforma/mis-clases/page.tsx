@@ -118,7 +118,19 @@ export default async function PaginaMisClases({
         clase: { fechaHora: { gte: hoyInicio, lte: finRango }, estado: "ACTIVA" },
       },
       orderBy: { clase: { fechaHora: "asc" } },
-      include: { clase: { include: { disciplina: true } }, pago: { select: { tipo: true } } },
+      include: {
+        clase: {
+          include: {
+            disciplina: true,
+            asistencias: {
+              where: {
+                usuarioId: usuario.id,
+              },
+            },
+          },
+        },
+        pago: { select: { tipo: true } },
+      },
     });
 
     const finRangoEspera = new Date(ahora);
@@ -239,54 +251,76 @@ export default async function PaginaMisClases({
                   No tenés clases en los próximos {rangoDias} días.
                 </p>
               )}
-              {proximasClases.length > 0 && proximasClases.map((insc, i) => (
-                    <div
-                      key={insc.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "14px 20px",
-                        borderTop: i === 0 ? "none" : "1px solid #f3f4f6",
-                        gap: 12,
-                      }}
+              {proximasClases.length > 0 && proximasClases.map((insc, i) => {
+                const estaPresente = insc.clase.asistencias.some((a) => a.presente);
+                const inicioVentana = new Date(insc.clase.fechaHora.getTime() - 10 * 60000);
+                const finVentana = new Date(insc.clase.fechaHora.getTime() + (insc.clase.duracionMin + 30) * 60000);
+                const estaEnVentana = ahora >= inicioVentana && ahora <= finVentana;
+
+                return (
+                  <div
+                    key={insc.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "14px 20px",
+                      borderTop: i === 0 ? "none" : "1px solid #f3f4f6",
+                      gap: 12,
+                    }}
+                  >
+                    <Link
+                      href={`/plataforma/cronograma?claseId=${insc.clase.id}`}
+                      style={{ display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit", flex: 1 }}
                     >
-                      <Link
-                        href={`/plataforma/cronograma?claseId=${insc.clase.id}`}
-                        style={{ display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit", flex: 1 }}
-                      >
-                        <div style={{ background: "#f0fdf4", borderRadius: 10, padding: "8px 10px", textAlign: "center", minWidth: 48 }}>
-                          <p style={{ margin: 0, fontSize: "0.7rem", color: "#16a34a", fontWeight: 700, textTransform: "uppercase" }}>
-                            {format(insc.clase.fechaHora, "EEE", { locale: es })}
-                          </p>
-                          <p style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#15803d" }}>
-                            {format(insc.clase.fechaHora, "dd/MM")}
-                          </p>
+                      <div style={{ background: "#f0fdf4", borderRadius: 10, padding: "8px 10px", textAlign: "center", minWidth: 48 }}>
+                        <p style={{ margin: 0, fontSize: "0.7rem", color: "#16a34a", fontWeight: 700, textTransform: "uppercase" }}>
+                          {format(insc.clase.fechaHora, "EEE", { locale: es })}
+                        </p>
+                        <p style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#15803d" }}>
+                          {format(insc.clase.fechaHora, "dd/MM")}
+                        </p>
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: "0.95rem" }}>{insc.clase.titulo}</p>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                          <span style={{ color: "#9ca3af", fontSize: "0.82rem" }}>{format(insc.clase.fechaHora, "HH:mm")} hs</span>
+                          {insc.pago?.tipo === "MENSUALIDAD" && (
+                            <span style={{ background: "rgba(168,85,247,0.1)", color: "#7c3aed", padding: "1px 8px", borderRadius: 20, fontSize: "0.75rem", fontWeight: 600 }}>Abono</span>
+                          )}
+                          {insc.pago?.tipo === "CLASE_INDIVIDUAL" && (
+                            <span style={{ background: "rgba(59,130,246,0.1)", color: "#1d4ed8", padding: "1px 8px", borderRadius: 20, fontSize: "0.75rem", fontWeight: 600 }}>Individual</span>
+                          )}
+                          {!insc.pago?.tipo && (
+                            <span style={{ background: "rgba(234,179,8,0.12)", color: "#92400e", padding: "1px 8px", borderRadius: 20, fontSize: "0.75rem", fontWeight: 600 }}>🎁 Clase gratis</span>
+                          )}
                         </div>
-                        <div>
-                          <p style={{ margin: 0, fontWeight: 600, fontSize: "0.95rem" }}>{insc.clase.titulo}</p>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-                            <span style={{ color: "#9ca3af", fontSize: "0.82rem" }}>{format(insc.clase.fechaHora, "HH:mm")} hs</span>
-                            {insc.pago?.tipo === "MENSUALIDAD" && (
-                              <span style={{ background: "rgba(168,85,247,0.1)", color: "#7c3aed", padding: "1px 8px", borderRadius: 20, fontSize: "0.75rem", fontWeight: 600 }}>Abono</span>
-                            )}
-                            {insc.pago?.tipo === "CLASE_INDIVIDUAL" && (
-                              <span style={{ background: "rgba(59,130,246,0.1)", color: "#1d4ed8", padding: "1px 8px", borderRadius: 20, fontSize: "0.75rem", fontWeight: 600 }}>Individual</span>
-                            )}
-                            {!insc.pago?.tipo && (
-                              <span style={{ background: "rgba(234,179,8,0.12)", color: "#92400e", padding: "1px 8px", borderRadius: 20, fontSize: "0.75rem", fontWeight: 600 }}>🎁 Clase gratis</span>
-                            )}
-                          </div>
-                        </div>
+                      </div>
+                      {estaPresente ? (
+                        <span style={{ marginLeft: "auto", background: "#f0fdf4", color: "#16a34a", borderRadius: 20, padding: "3px 12px", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}>
+                          ✓ Presente
+                        </span>
+                      ) : !estaEnVentana ? (
                         <span style={{ marginLeft: "auto", background: "#f0fdf4", color: "#16a34a", borderRadius: 20, padding: "3px 12px", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}>
                           ✓ Confirmada
                         </span>
-                      </Link>
-                      {insc.clase.fechaHora >= new Date() && (
-                        <BotonCancelarInscripcion inscripcionId={insc.id} />
-                      )}
-                    </div>
-              ))}
+                      ) : null}
+                    </Link>
+
+                    {!estaPresente && estaEnVentana && (
+                      <BotonEscanearCliente
+                        claseId={insc.clase.id}
+                        inicioVentana={inicioVentana.toISOString()}
+                        finVentana={finVentana.toISOString()}
+                      />
+                    )}
+
+                    {insc.clase.fechaHora >= new Date() && (
+                      <BotonCancelarInscripcion inscripcionId={insc.id} />
+                    )}
+                  </div>
+                );
+              })}
               {(hayMasClases || rangoDias > 7) && (
                 <div style={{ padding: "12px 20px", borderTop: proximasClases.length > 0 ? "1px solid #f3f4f6" : "none", display: "flex", gap: 16 }}>
                   {hayMasClases && (
