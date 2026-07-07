@@ -317,22 +317,24 @@ if (fechaDisponible.getTime() !== clase.fechaHora.getTime()) {
     return NextResponse.json({
       initPoint: resultado.init_point,
     });
-  } catch (error) {
-    const detalle =
-      error instanceof Error
-        ? error.message
-        : typeof error === "object"
-          ? JSON.stringify(error)
-          : String(error);
+  } catch (error: any) {
+  console.error("ERROR COMPLETO:");
+  console.error(error);
 
-    console.error("Error creando preferencia de Mercado Pago:", error);
+  console.error("STATUS:");
+  console.error(error?.status);
 
-    return NextResponse.json(
-      {
-        error: "Error al iniciar el pago",
-        detalle,
-      },
-      { status: 500 }
-    );
-  }
+  console.error("CAUSE:");
+  console.error(error?.cause);
+
+  console.error("BODY:");
+  console.error(error?.body);
+
+  return NextResponse.json(
+    {
+      error: "Error al iniciar el pago",
+    },
+    { status: 500 }
+  );
+}
 }
