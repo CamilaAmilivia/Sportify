@@ -121,10 +121,14 @@ export async function notificarElegiblesListaEspera(claseId: number) {
       data: { notificadoEn: new Date() },
     });
 
-    await sendListaEsperaPromocionEmail(
-      entrada.usuario.email,
-      clase.titulo,
-      clase.fechaHora
-    );
+    try {
+      await sendListaEsperaPromocionEmail(
+        entrada.usuario.email,
+        clase.titulo,
+        clase.fechaHora
+      );
+    } catch {
+      // El mail falla silenciosamente — notificadoEn ya fue seteado
+    }
   }
 }

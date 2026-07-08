@@ -293,7 +293,7 @@ if (fechaDisponible.getTime() !== clase.fechaHora.getTime()) {
       montoAPagar = montoAPagar * (1 + recargoVigente.porcentaje / 100);
     }
 
-    const reservaHasta = new Date(Date.now() + 15 * 60 * 1000);
+    const reservaHasta = new Date(Date.now() + 30 * 1000);
 
     const pago = await prisma.pago.create({
       data: {

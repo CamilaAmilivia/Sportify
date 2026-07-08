@@ -145,7 +145,6 @@ export function FormularioCrearClase({
         hour12: false,
       });
       setMensajeExito(`Se creó la serie de clases ${formData.titulo} exitosamente para el horario ${formData.horaInicio} a ${horarioFin}.`);
-      onSuccess();
       setCargando(false);
       setTimeout(() => {
         onSuccess();
