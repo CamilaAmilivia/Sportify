@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import {
   esMismoDiaYHorario,
@@ -77,6 +78,13 @@ export async function POST(request: Request) {
         return;
       }
 
+      if (pagoActual.penalizacionId) {
+        await tx.penalizacion.update({
+          where: { id: pagoActual.penalizacionId },
+          data: { aplicada: true },
+        });
+      }
+
       if (!pagoActual.claseId) {
         return;
       }
@@ -122,7 +130,7 @@ export async function POST(request: Request) {
             },
           });
 
-          if (yaInscripto) {
+          if (yaInscripto?.estado === "ACTIVA") {
             continue;
           }
 
@@ -171,8 +179,18 @@ export async function POST(request: Request) {
             continue;
           }
 
-          await tx.inscripcion.create({
-            data: {
+          await tx.inscripcion.upsert({
+            where: {
+              usuarioId_claseId: {
+                usuarioId: pagoActual.usuarioId,
+                claseId: claseDelMes.id,
+              },
+            },
+            update: {
+              estado: "ACTIVA",
+              pagoId: pagoActual.id,
+            },
+            create: {
               usuarioId: pagoActual.usuarioId,
               claseId: claseDelMes.id,
               estado: "ACTIVA",
@@ -203,7 +221,7 @@ export async function POST(request: Request) {
         },
       });
 
-      if (inscripcionExistente) {
+      if (inscripcionExistente?.estado === "ACTIVA") {
         await tx.pago.update({
           where: {
             id: pagoActual.id,
@@ -238,14 +256,49 @@ export async function POST(request: Request) {
         return;
       }
 
-      await tx.inscripcion.create({
-        data: {
+      await tx.inscripcion.upsert({
+        where: {
+          usuarioId_claseId: {
+            usuarioId: pagoActual.usuarioId,
+            claseId: pagoActual.claseId,
+          },
+        },
+        update: {
+          estado: "ACTIVA",
+          pagoId: pagoActual.id,
+        },
+        create: {
           usuarioId: pagoActual.usuarioId,
           claseId: pagoActual.claseId,
           estado: "ACTIVA",
           pagoId: pagoActual.id,
         },
       });
+
+      const entradaListaEspera = await tx.listaEspera.findUnique({
+        where: {
+          usuarioId_claseId: {
+            usuarioId: pagoActual.usuarioId,
+            claseId: pagoActual.claseId,
+          },
+        },
+      });
+
+      if (entradaListaEspera) {
+        await tx.listaEspera.delete({
+          where: { id: entradaListaEspera.id },
+        });
+
+        await tx.listaEspera.updateMany({
+          where: {
+            claseId: pagoActual.claseId,
+            posicion: { gt: entradaListaEspera.posicion },
+          },
+          data: {
+            posicion: { decrement: 1 },
+          },
+        });
+      }
 
       await tx.pago.update({
         where: {
@@ -257,6 +310,8 @@ export async function POST(request: Request) {
         },
       });
     });
+
+    revalidatePath("/plataforma", "layout");
 
     return NextResponse.json({ ok: true });
   } catch (error) {

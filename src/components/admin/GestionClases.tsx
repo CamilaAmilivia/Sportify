@@ -315,6 +315,7 @@ export function GestionClases({
           profesores={profesores}
           onClose={() => setMostrarFormulario(false)}
           onSuccess={() => {
+            setMostrarFormulario(false);
             router.refresh();
             fetchClases(); // Refrescar las clases del lado del cliente
           }}
@@ -334,7 +335,7 @@ export function GestionClases({
             alignItems: "center",
             justifyContent: "center",
             padding: "20px",
-            zIndex: 50,
+            zIndex: 1001,
           }}
         >
           <div

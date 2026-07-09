@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cerrarSesion } from "./actions";
+import { usePathname, useRouter } from "next/navigation";
+import { cerrarSesion, verificarNotificacionCupoLiberado } from "./actions";
 import type { UsuarioSesion } from "@/tipos/usuario";
 import { navegacionPorRol, nombreRol } from "@/configuracion/navegacion";
+import type { NotificacionCupoLiberado } from "@/lib/notificaciones";
 
 /* ─── Constantes de color (token → value literal para inline-safety) ─── */
 const GREEN = "#22c55e";
@@ -14,12 +15,104 @@ const GRAY = "#6B7280";
 
 export default function NavbarPlataforma({
   usuario,
+  notificacionCupoLiberado: notificacionInicial,
 }: {
   usuario: UsuarioSesion;
+  notificacionCupoLiberado?: NotificacionCupoLiberado | null;
 }) {
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [notificacionAbierta, setNotificacionAbierta] = useState(false);
+  const [notificacionCupoLiberado, setNotificacionCupoLiberado] = useState(
+    notificacionInicial ?? null
+  );
   const pathname = usePathname();
+  const router = useRouter();
   const itemsNavegacion = navegacionPorRol[usuario.rol];
+  const notificacionRef = useRef(notificacionInicial ?? null);
+
+  useEffect(() => {
+    verificarNotificacionCupoLiberado()
+      .then((nueva) => {
+        const habiaNotificacion = !!notificacionRef.current;
+        notificacionRef.current = nueva;
+        setNotificacionCupoLiberado(nueva);
+        if (!!nueva && !habiaNotificacion) {
+          router.refresh();
+        }
+      })
+      .catch(() => {});
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!menuAbierto && !notificacionAbierta) {
+      return;
+    }
+
+    function handleClickFuera(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+
+      if (!target.closest("[data-menu-cuenta]")) {
+        setMenuAbierto(false);
+      }
+
+      if (!target.closest("[data-menu-notificacion]")) {
+        setNotificacionAbierta(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickFuera);
+    return () => document.removeEventListener("mousedown", handleClickFuera);
+  }, [menuAbierto, notificacionAbierta]);
+
+  const dropdownNotificacion = notificacionAbierta && notificacionCupoLiberado && (
+    <div
+      style={{
+        position: "absolute",
+        top: "calc(100% + 8px)",
+        right: 0,
+        width: 300,
+        background: "white",
+        borderRadius: 14,
+        border: "1px solid rgba(0,0,0,0.08)",
+        boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
+        overflow: "hidden",
+        zIndex: 200,
+        padding: 18,
+      }}
+    >
+      <p style={{ margin: 0, fontWeight: 800, color: DARK, fontSize: "0.95rem" }}>
+        🎉 ¡Se liberó un cupo!
+      </p>
+      <p style={{ margin: "8px 0 0", fontSize: "0.85rem", color: GRAY }}>
+        Hay un lugar disponible en <strong>{notificacionCupoLiberado.titulo}</strong>
+        {" "}
+        (
+        {new Date(notificacionCupoLiberado.fechaHora).toLocaleDateString("es-AR", {
+          day: "2-digit",
+          month: "2-digit",
+        })}
+        ). Confirmá tu inscripción antes de que se ocupe.
+      </p>
+      <Link
+        href={`/plataforma/cronograma?claseId=${notificacionCupoLiberado.claseId}&vista=resumen&tipoPago=CLASE_INDIVIDUAL&origen=listaEspera`}
+        onClick={() => setNotificacionAbierta(false)}
+        style={{
+          display: "block",
+          textAlign: "center",
+          marginTop: 14,
+          borderRadius: 8,
+          padding: "10px 14px",
+          background: GREEN,
+          color: "white",
+          fontWeight: 700,
+          fontSize: "0.9rem",
+          textDecoration: "none",
+        }}
+      >
+        Confirmar inscripción
+      </Link>
+    </div>
+  );
 
   /* Dropdown "Mi cuenta" compartido entre desktop y mobile */
   const dropdownMenu = menuAbierto && (
@@ -153,6 +246,7 @@ export default function NavbarPlataforma({
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => {}}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -192,34 +286,40 @@ export default function NavbarPlataforma({
             position: "relative",
           }}
         >
-          <button
-            type="button"
-            aria-label="Notificaciones"
-            style={{
-              position: "relative",
-              background: "none",
-              border: "none",
-              fontSize: "1.4rem",
-              cursor: "pointer",
-              padding: "4px",
-              lineHeight: 1,
-            }}
-          >
-            🔔
-            <span
+          <div style={{ position: "relative" }} data-menu-notificacion>
+            <button
+              type="button"
+              aria-label="Notificaciones"
+              onClick={() => setNotificacionAbierta((v) => !v)}
               style={{
-                position: "absolute",
-                top: 2,
-                right: 2,
-                width: 9,
-                height: 9,
-                borderRadius: "50%",
-                background: GREEN,
+                position: "relative",
+                background: "none",
+                border: "none",
+                fontSize: "1.4rem",
+                cursor: "pointer",
+                padding: "4px",
+                lineHeight: 1,
               }}
-            />
-          </button>
+            >
+              🔔
+              {notificacionCupoLiberado && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 2,
+                    right: 2,
+                    width: 9,
+                    height: 9,
+                    borderRadius: "50%",
+                    background: GREEN,
+                  }}
+                />
+              )}
+            </button>
+            {dropdownNotificacion}
+          </div>
 
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative" }} data-menu-cuenta>
             <button
               type="button"
               onClick={() => setMenuAbierto((v) => !v)}
@@ -275,32 +375,38 @@ export default function NavbarPlataforma({
             />
           </div>
 
-          <button
-            type="button"
-            aria-label="Notificaciones"
-            style={{
-              position: "relative",
-              background: "none",
-              border: "none",
-              fontSize: "1.4rem",
-              cursor: "pointer",
-              padding: "4px",
-              lineHeight: 1,
-            }}
-          >
-            🔔
-            <span
+          <div style={{ position: "relative" }} data-menu-notificacion>
+            <button
+              type="button"
+              aria-label="Notificaciones"
+              onClick={() => setNotificacionAbierta((v) => !v)}
               style={{
-                position: "absolute",
-                top: 2,
-                right: 2,
-                width: 9,
-                height: 9,
-                borderRadius: "50%",
-                background: GREEN,
+                position: "relative",
+                background: "none",
+                border: "none",
+                fontSize: "1.4rem",
+                cursor: "pointer",
+                padding: "4px",
+                lineHeight: 1,
               }}
-            />
-          </button>
+            >
+              🔔
+              {notificacionCupoLiberado && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 2,
+                    right: 2,
+                    width: 9,
+                    height: 9,
+                    borderRadius: "50%",
+                    background: GREEN,
+                  }}
+                />
+              )}
+            </button>
+            {dropdownNotificacion}
+          </div>
         </div>
 
         {/* Filas de navegación: un botón por fila */}
@@ -311,6 +417,7 @@ export default function NavbarPlataforma({
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => {}}
                 style={{
                   display: "block",
                   padding: "16px 24px",
@@ -334,6 +441,7 @@ export default function NavbarPlataforma({
               position: "relative",
               borderBottom: "1px solid rgba(0,0,0,0.06)",
             }}
+            data-menu-cuenta
           >
             <button
               type="button"

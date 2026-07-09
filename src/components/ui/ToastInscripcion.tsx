@@ -23,6 +23,10 @@ export function ToastInscripcion() {
       toast.success("Pago aprobado. Inscripción completada correctamente.");
     }
 
+    if (tipoToast === "credito-ok") {
+      toast.success("Inscripción exitosa. Se usó una clase gratis de tu saldo de créditos.");
+    }
+
     if (tipoToast === "lista-espera-ok") {
       toast.success(
         nombreClase

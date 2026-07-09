@@ -41,6 +41,14 @@ enum TipoListaEspera {
   CLASE_INDIVIDUAL
 }
 
+enum TipoPenalizacion {
+  AVISO_CANCELACION_TARDIA_ABONO
+  RECARGO_CLASE_INDIVIDUAL
+  RECARGO_ABONO
+  RECARGO_AUSENCIA_INDIVIDUAL
+  AVISO_AUSENCIA_ABONO
+}
+
 model Usuario {
   id         Int       @id @default(autoincrement())
   dni        Int       @unique
@@ -60,6 +68,9 @@ model Usuario {
   listaEspera    ListaEspera[]
   asistencias    Asistencia[]
   pagos          Pago[]
+  penalizaciones Penalizacion[]
+  creditosClase  CreditoClase[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Disciplina {
@@ -96,6 +107,9 @@ model Clase {
   listaEspera   ListaEspera[]
   asistencias   Asistencia[]
   pagos         Pago[]
+  penalizaciones Penalizacion[]
+  creditosOrigen CreditoClase[] @relation("CreditoOrigen")
+  creditosUsados CreditoClase[] @relation("CreditoUsado")
 }
 
 model Inscripcion {
@@ -116,11 +130,12 @@ model Inscripcion {
 }
 
 model ListaEspera {
-  id        Int      @id @default(autoincrement())
-  posicion  Int
-  tipo      TipoListaEspera @default(CLASE_INDIVIDUAL)
-  prioridad Int      @default(0)
-  createdAt DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  posicion     Int
+  tipo         TipoListaEspera @default(CLASE_INDIVIDUAL)
+  prioridad    Int      @default(0)
+  createdAt    DateTime @default(now())
+  notificadoEn DateTime?
 
   usuarioId Int
   usuario   Usuario @relation(fields: [usuarioId], references: [id])
@@ -171,6 +186,9 @@ model Pago {
   claseId Int?
   clase   Clase? @relation(fields: [claseId], references: [id])
 
+  penalizacionId Int?
+  penalizacion   Penalizacion? @relation(fields: [penalizacionId], references: [id])
+
   inscripciones Inscripcion[]
   listaEspera   ListaEspera[]
 
@@ -179,4 +197,56 @@ model Pago {
   @@index([estado])
 }
 
+model CreditoClase {
+  id        Int       @id @default(autoincrement())
+  motivo    String
+  usado     Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  usadoEn   DateTime?
 
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  claseOrigenId Int?
+  claseOrigen   Clase? @relation("CreditoOrigen", fields: [claseOrigenId], references: [id])
+
+  claseUsadaId Int?
+  claseUsada   Clase? @relation("CreditoUsado", fields: [claseUsadaId], references: [id])
+
+  @@index([usuarioId])
+  @@index([usado])
+}
+
+model Penalizacion {
+  id          Int              @id @default(autoincrement())
+  tipo        TipoPenalizacion
+  porcentaje  Float            @default(0)
+  motivo      String
+  aplicada    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  claseId Int?
+  clase   Clase? @relation(fields: [claseId], references: [id])
+
+  pagos Pago[]
+
+  @@index([usuarioId])
+  @@index([tipo])
+  @@index([aplicada])
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([token])
+  @@index([usuarioId])
+}
