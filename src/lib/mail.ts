@@ -114,10 +114,13 @@ export async function sendClaseCanceladaEmail(
   }
 
   const mensajeToken = tieneToken
-    ? "<p>Como sos abonado, se acreditó un token para compensar la cancelación de la clase.</p>"
-    : "";
+  ? `
+    <p>Por ser abonado, se acreditó un token para compensar la cancelación de la clase.</p>
+    <p>el mismo puede ser canjeado por una clase individual a elección.</p>
+  `
+  : "";
 
-  await transporter.sendMail({
+  const info = await transporter.sendMail({
     from: smtpFrom,
     to,
     subject: "Cancelación de clase - Sportify",
