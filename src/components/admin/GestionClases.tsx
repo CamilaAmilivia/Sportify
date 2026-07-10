@@ -4,13 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { TituloPagina } from "@/components/ui/TituloPagina";
 import { FormularioCrearClase } from "@/components/ui/FormularioCrearClase";
-<<<<<<< HEAD
 import { FormularioEditarClase } from "@/components/ui/FormularioEditarClase";
 import { eliminarClasesSimilares, obtenerClasesFiltradas, suspenderClase } from "@/app/plataforma/clases/actions";
-=======
 import { Toast } from "@/components/ui/Toast";
-import { eliminarClasesSimilares, obtenerClasesFiltradas } from "@/app/plataforma/clases/actions";
->>>>>>> borrar-clase
 
 type Clase = {
   id: number;
@@ -51,7 +47,6 @@ export function GestionClases({
   const [cargando, setCargando] = useState(false);
   const [claseAEliminar, setClaseAEliminar] = useState<Clase | null>(null);
   const [eliminando, setEliminando] = useState(false);
-<<<<<<< HEAD
   const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
 
   const [fechaFiltroEspecifica, setFechaFiltroEspecifica] = useState<string>("");
@@ -62,9 +57,7 @@ export function GestionClases({
   const [errorSuspender, setErrorSuspender] = useState<string | null>(null);
 
   const [claseAEditar, setClaseAEditar] = useState<Clase | null>(null);
-=======
   const [errorEnDialogo, setErrorEnDialogo] = useState<string | null>(null);
->>>>>>> borrar-clase
   
   const [toast, setToast] = useState<{ tipo: "success" | "error"; mensaje: string } | null>(null);
 
@@ -565,24 +558,10 @@ export function GestionClases({
             >
               {errorEnDialogo ? "No se puede eliminar" : "Eliminar clase"}
             </h3>
-<<<<<<< HEAD
-            <p style={{ margin: "0 0 16px", color: "var(--color-dark)", fontWeight: 600 }}>
-              ¿Está seguro que quiere eliminar esta clase?
-            </p>
-            <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", marginBottom: "16px", border: "1px solid rgba(0,0,0,0.06)", fontSize: "0.95rem" }}>
-              <p style={{ margin: "0 0 8px" }}><strong>Clase:</strong> {claseAEliminar.disciplina.nombre} ({claseAEliminar.titulo})</p>
-              <p style={{ margin: "0 0 8px" }}><strong>Profesor:</strong> {claseAEliminar.profesor.nombre} {claseAEliminar.profesor.apellido}</p>
-              <p style={{ margin: "0 0 8px" }}><strong>Fecha:</strong> {formatearFecha(claseAEliminar.fechaHora)}</p>
-              <p style={{ margin: 0 }}><strong>Horario:</strong> {formatearHorario(claseAEliminar.fechaHora, claseAEliminar.duracionMin)}</p>
-            </div>
-            <p style={{ margin: 0, color: "#dc2626", fontSize: "0.95rem", fontWeight: 700 }}>
-              Se borrarán todas las instancias hasta 31/12/2026.
-=======
             <p style={{ margin: 0, color: "var(--color-gray)", lineHeight: 1.6, fontWeight: 500 }}>
               {errorEnDialogo 
                 ? errorEnDialogo 
                 : `Esta seguro que quiere eliminar esta clase? se borraran todas las instancias hasta 31/12/${new Date().getFullYear()}.`}
->>>>>>> borrar-clase
             </p>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
@@ -641,7 +620,6 @@ export function GestionClases({
         </div>
       )}
 
-<<<<<<< HEAD
       {claseASuspender && (
         <div
           role="dialog"
@@ -747,7 +725,7 @@ export function GestionClases({
             </div>
           </div>
         </div>
-=======
+      )}
       {toast && (
         <Toast
           tipo={toast.tipo}
@@ -755,7 +733,6 @@ export function GestionClases({
           duracion={8000}
           onClose={() => setToast(null)}
         />
->>>>>>> borrar-clase
       )}
     </>
   );

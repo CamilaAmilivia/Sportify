@@ -146,3 +146,61 @@ Disculpá las molestias.`,
     `,
   });
 }
+
+export async function sendClaseSuspendidaEmail(
+  to: string,
+  nombre: string,
+  claseTitulo: string,
+  disciplina: string,
+  claseFechaHora: Date,
+  tieneToken: boolean
+) {
+  const fechaTexto = claseFechaHora.toLocaleString("es-AR", {
+    dateStyle: "long",
+    timeStyle: "short",
+  });
+
+  if (!smtpHost || !smtpUser) {
+    console.log("=========================================");
+    console.log(`Clase suspendida para ${to}`);
+    console.log(`${claseTitulo} - ${fechaTexto}`);
+    console.log("=========================================");
+    return;
+  }
+
+  const mensajeCredito = tieneToken
+    ? `
+    <p>Por ser abonado, se acreditó un crédito de clase gratis para compensar la suspensión.</p>
+    <p>El mismo puede ser utilizado en cualquier otra clase a tu elección.</p>
+  `
+    : `
+    <p>Recibirás tu reintegro en efectivo en el gimnasio.</p>
+  `;
+
+  const info = await transporter.sendMail({
+    from: smtpFrom,
+    to,
+    subject: "Suspensión de clase - Sportify",
+    text: `Hola ${nombre}.
+
+La clase de ${disciplina} "${claseTitulo}" del ${fechaTexto} fue suspendida.
+
+${tieneToken ? "Se acreditó un crédito de clase gratis para compensar la suspensión." : "Recibirás tu reintegro en efectivo en el gimnasio."}
+
+Disculpá las molestias.`,
+
+    html: `
+      <p>Hola <strong>${nombre}</strong>.</p>
+
+      <p>Te informamos que la clase de
+      <strong>${disciplina}</strong>
+      "${claseTitulo}"
+      del <strong>${fechaTexto}</strong>
+      ha sido suspendida.</p>
+
+      ${mensajeCredito}
+
+      <p>Disculpá las molestias.</p>
+    `,
+  });
+}

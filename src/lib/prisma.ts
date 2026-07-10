@@ -10,6 +10,14 @@ function createPrismaClient() {
   return new PrismaClient({ adapter });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+// En desarrollo, siempre recrea la instancia para evitar cachés stale
+const prismaInstance = 
+  process.env.NODE_ENV === "production"
+    ? globalForPrisma.prisma ?? createPrismaClient()
+    : createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+export const prisma = prismaInstance;
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prismaInstance;
+}

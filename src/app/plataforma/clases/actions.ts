@@ -63,9 +63,6 @@ export async function eliminarClasesSimilares(claseId: number) {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
-<<<<<<< HEAD
-  const finAnio = new Date(2026, 11, 31, 23, 59, 59, 999);
-=======
   if (claseBase.fechaHora < hoy) {
   return {
     error: "No es posible eliminar clases con fecha anterior al día de hoy.",
@@ -73,7 +70,6 @@ export async function eliminarClasesSimilares(claseId: number) {
 }
 
   const finAnio = new Date(hoy.getFullYear(), 11, 31, 23, 59, 59, 999);
->>>>>>> borrar-clase
 
   const baseDiaSemana = claseBase.fechaHora.getDay();
   const baseHora = claseBase.fechaHora.getHours();
@@ -245,6 +241,7 @@ export async function suspenderClase(claseId: number) {
 
   const { crearNotificacion } = await import("@/lib/notificaciones");
   const { otorgarCreditoClase } = await import("@/lib/creditos");
+  const { sendClaseSuspendidaEmail } = await import("@/lib/mail");
 
   for (const inscripcion of clase.inscripciones) {
     await prisma.inscripcion.update({
@@ -256,21 +253,53 @@ export async function suspenderClase(claseId: number) {
     let mensaje = "";
 
     if (esAbonado) {
+      // El crédito se otorga específicamente para esta clase suspendida
+      // y no afecta ninguna otra inscripción del cliente
       await otorgarCreditoClase({
         usuarioId: inscripcion.usuarioId,
         claseOrigenId: clase.id,
         motivo: `Reintegro por clase "${clase.titulo}" suspendida el ${fechaClaseStr}.`
       });
-      mensaje = `La clase de ${clase.disciplina.nombre} del ${fechaClaseStr} a las ${horarioInicioStr} ha sido suspendida. Se te ha otorgado un crédito de clase gratis.`;
+      mensaje = `La clase de ${clase.disciplina.nombre} del ${fechaClaseStr} a las ${horarioInicioStr} ha sido suspendida. Se te ha otorgado un crédito de clase gratis que puedes usar en cualquier otra clase.`;
     } else {
       mensaje = `La clase de ${clase.disciplina.nombre} del ${fechaClaseStr} a las ${horarioInicioStr} ha sido suspendida. Recibirás tu reintegro en efectivo en el gimnasio.`;
     }
 
     await crearNotificacion(inscripcion.usuarioId, mensaje);
+
+    // Enviar mail al cliente (solo si SMTP está disponible)
+    try {
+      await sendClaseSuspendidaEmail(
+        inscripcion.usuario.email,
+        inscripcion.usuario.nombre,
+        clase.titulo,
+        clase.disciplina.nombre,
+        clase.fechaHora,
+        esAbonado
+      );
+    } catch (error) {
+      console.error(`No se pudo enviar mail a ${inscripcion.usuario.email}:`, error);
+      // Continuar con otros clientes incluso si falla un mail
+    }
   }
 
   const mensajeProfesor = `La clase de ${clase.disciplina.nombre} del ${fechaClaseStr} a las ${horarioInicioStr} que tenías asignada ha sido suspendida.`;
   await crearNotificacion(clase.profesorId, mensajeProfesor);
+
+  // Enviar mail al profesor (solo si SMTP está disponible)
+  try {
+    await sendClaseSuspendidaEmail(
+      clase.profesor.email,
+      clase.profesor.nombre,
+      clase.titulo,
+      clase.disciplina.nombre,
+      clase.fechaHora,
+      false
+    );
+  } catch (error) {
+    console.error(`No se pudo enviar mail al profesor ${clase.profesor.email}:`, error);
+    // La suspensión se completó correctamente, el mail es secundario
+  }
 
   revalidatePath("/plataforma/clases");
   revalidatePath("/plataforma/cronograma");
