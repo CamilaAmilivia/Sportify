@@ -71,6 +71,7 @@ model Usuario {
   penalizaciones Penalizacion[]
   creditosClase  CreditoClase[]
   passwordResetTokens PasswordResetToken[]
+  notificaciones Notificacion[]
 }
 
 model Disciplina {
@@ -249,4 +250,17 @@ model PasswordResetToken {
 
   @@index([token])
   @@index([usuarioId])
+}
+
+model Notificacion {
+  id        Int      @id @default(autoincrement())
+  mensaje   String
+  leida     Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  usuarioId Int
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@index([leida])
 }

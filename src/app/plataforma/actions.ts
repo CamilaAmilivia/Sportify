@@ -22,6 +22,21 @@ export async function verificarNotificacionCupoLiberado() {
   return obtenerNotificacionCupoLiberado(usuario.id);
 }
 
+export async function verificarNotificacionesUsuario() {
+  const usuario = await requerirUsuarioActual();
+  if (!usuario) return [];
+
+  const { obtenerNotificacionesUsuario } = await import("@/lib/notificaciones");
+  return obtenerNotificacionesUsuario(usuario.id);
+}
+
+export async function descartarNotificacion(notificacionId: number) {
+  await requerirUsuarioActual();
+
+  const { marcarNotificacionLeida } = await import("@/lib/notificaciones");
+  await marcarNotificacionLeida(notificacionId);
+}
+
 export type CrearClaseErrores = {
   titulo?: string[];
   profesorId?: string[];
