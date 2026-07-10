@@ -148,7 +148,7 @@ export function FormularioCrearClase({
       setCargando(false);
       setTimeout(() => {
         onSuccess();
-      }, 2000);
+      }, 8000);
     } else if (result.errores) {
       setErrores(result.errores as CrearClaseErrores);
       setCargando(false);

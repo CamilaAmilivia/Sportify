@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requerirRol } from "@/lib/sesion";
-import { sendClaseCanceladaEmail } from "@/lib/mail";
+import { sendClaseCanceladaEmail} from "@/lib/mail";
 import { TipoPago, Usuario } from "@/generated/prisma/client";
 
 export async function obtenerClasesFiltradas(fechaInicioIso: string, fechaFinIso: string) {
@@ -63,7 +63,17 @@ export async function eliminarClasesSimilares(claseId: number) {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
+<<<<<<< HEAD
   const finAnio = new Date(2026, 11, 31, 23, 59, 59, 999);
+=======
+  if (claseBase.fechaHora < hoy) {
+  return {
+    error: "No es posible eliminar clases con fecha anterior al día de hoy.",
+  };
+}
+
+  const finAnio = new Date(hoy.getFullYear(), 11, 31, 23, 59, 59, 999);
+>>>>>>> borrar-clase
 
   const baseDiaSemana = claseBase.fechaHora.getDay();
   const baseHora = claseBase.fechaHora.getHours();
@@ -99,7 +109,7 @@ export async function eliminarClasesSimilares(claseId: number) {
   const ids = clasesAEliminar.map((clase) => clase.id);
 
   if (ids.length === 0) {
-    return { error: "No se encontraron clases para eliminar desde hoy hasta fin de anio." };
+    return { error: "No se encontraron clases para eliminar desde hoy hasta fin de año." };
   }
 
   const clasesConDatos = await prisma.clase.findMany({
@@ -125,8 +135,20 @@ const clientesNotificados = new Map<
   }
 >();
 
-for (const { usuario, esAbonado } of clientesNotificados.values()) {
+// Reunir todos los clientes inscriptos sin duplicarlos
+for (const clase of clasesConDatos) {
+  for (const inscripcion of clase.inscripciones) {
+    if (!clientesNotificados.has(inscripcion.usuario.id)) {
+      clientesNotificados.set(inscripcion.usuario.id, {
+        usuario: inscripcion.usuario,
+        esAbonado: inscripcion.pago?.tipo === TipoPago.MENSUALIDAD,
+      });
+    }
+  }
+}
 
+// Notificar a cada cliente y otorgar crédito a los abonados
+for (const { usuario, esAbonado } of clientesNotificados.values()) {
   await sendClaseCanceladaEmail(
     usuario.email,
     usuario.nombre,
@@ -134,14 +156,6 @@ for (const { usuario, esAbonado } of clientesNotificados.values()) {
     claseBase.fechaHora,
     esAbonado
   );
-
-await sendClaseCanceladaEmail(
-  claseBase.profesor.email,
-  claseBase.profesor.nombre,
-  claseBase.titulo,
-  claseBase.fechaHora,
-  false
-);
 
   if (esAbonado) {
     await prisma.creditoClase.create({
@@ -155,6 +169,7 @@ await sendClaseCanceladaEmail(
   }
 }
 
+// Notificar al profesor una única vez
 await sendClaseCanceladaEmail(
   claseBase.profesor.email,
   claseBase.profesor.nombre,
