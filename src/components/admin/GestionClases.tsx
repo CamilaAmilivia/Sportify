@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { TituloPagina } from "@/components/ui/TituloPagina";
 import { FormularioCrearClase } from "@/components/ui/FormularioCrearClase";
+import { Toast } from "@/components/ui/Toast";
 import { eliminarClasesSimilares, obtenerClasesFiltradas } from "@/app/plataforma/clases/actions";
 
 type Clase = {
@@ -41,8 +42,10 @@ export function GestionClases({
   const [cargando, setCargando] = useState(false);
   const [claseAEliminar, setClaseAEliminar] = useState<Clase | null>(null);
   const [eliminando, setEliminando] = useState(false);
-  const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
+  const [errorEnDialogo, setErrorEnDialogo] = useState<string | null>(null);
   
+  const [toast, setToast] = useState<{ tipo: "success" | "error"; mensaje: string } | null>(null);
+
   const router = useRouter();
 
   const fetchClases = useCallback(async () => {
@@ -118,22 +121,37 @@ export function GestionClases({
     if (!claseAEliminar) return;
 
     setEliminando(true);
-    setErrorEliminar(null);
+    setErrorEnDialogo(null);
 
     try {
       const resultado = await eliminarClasesSimilares(claseAEliminar.id);
 
       if (resultado.error) {
-        setErrorEliminar(resultado.error);
+        setErrorEnDialogo(resultado.error);
+        setToast({
+          tipo: "error",
+          mensaje: resultado.error,
+        });
         return;
       }
 
+      setToast({
+        tipo: "success",
+        mensaje: `Se eliminaron ${resultado.cantidadEliminadas} clase${resultado.cantidadEliminadas !== 1 ? "s" : ""} correctamente.`,
+      });
+
       setClaseAEliminar(null);
+      setErrorEnDialogo(null);
       router.refresh();
       await fetchClases();
     } catch (error) {
       console.error("Error eliminando clases:", error);
-      setErrorEliminar("No se pudo eliminar la clase. Intenta nuevamente.");
+      const mensajeError = "No se pudo eliminar la clase. Intenta nuevamente.";
+      setErrorEnDialogo(mensajeError);
+      setToast({
+        tipo: "error",
+        mensaje: mensajeError,
+      });
     } finally {
       setEliminando(false);
     }
@@ -284,7 +302,8 @@ export function GestionClases({
                         type="button"
                         onClick={() => {
                           setClaseAEliminar(clase);
-                          setErrorEliminar(null);
+                          setToast(null);
+                          setErrorEnDialogo(null);
                         }}
                         style={{
                           padding: "10px 14px",
@@ -357,56 +376,54 @@ export function GestionClases({
                 fontWeight: 800,
               }}
             >
-              Eliminar clase
+              {errorEnDialogo ? "No se puede eliminar" : "Eliminar clase"}
             </h3>
             <p style={{ margin: 0, color: "var(--color-gray)", lineHeight: 1.6, fontWeight: 500 }}>
-              Esta seguro que quiere eliminar esta clase? se borraran todas las instancias hasta 31/12/
-              {new Date().getFullYear()}.
+              {errorEnDialogo 
+                ? errorEnDialogo 
+                : `Esta seguro que quiere eliminar esta clase? se borraran todas las instancias hasta 31/12/${new Date().getFullYear()}.`}
             </p>
 
-            {errorEliminar && (
-              <p
-                style={{
-                  margin: "16px 0 0",
-                  color: "#b91c1c",
-                  background: "#fee2e2",
-                  border: "1px solid #fecaca",
-                  padding: "10px 12px",
-                  borderRadius: 8,
-                  fontWeight: 600,
-                }}
-              >
-                {errorEliminar}
-              </p>
-            )}
-
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
+              {!errorEnDialogo && (
+                <button
+                  type="button"
+                  disabled={eliminando}
+                  onClick={() => {
+                    setClaseAEliminar(null);
+                    setToast(null);
+                    setErrorEnDialogo(null);
+                  }}
+                  style={{
+                    padding: "12px 16px",
+                    background: "#f8fafc",
+                    color: "var(--color-dark)",
+                    border: "1px solid rgba(0,0,0,0.1)",
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    cursor: eliminando ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Cancelar
+                </button>
+              )}
               <button
                 type="button"
                 disabled={eliminando}
                 onClick={() => {
-                  setClaseAEliminar(null);
-                  setErrorEliminar(null);
+                  if (errorEnDialogo) {
+                    setClaseAEliminar(null);
+                    setErrorEnDialogo(null);
+                    setToast(null);
+                  } else {
+                    confirmarEliminacion();
+                  }
                 }}
                 style={{
                   padding: "12px 16px",
-                  background: "#f8fafc",
-                  color: "var(--color-dark)",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                  borderRadius: 8,
-                  fontWeight: 700,
-                  cursor: eliminando ? "not-allowed" : "pointer",
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={eliminando}
-                onClick={confirmarEliminacion}
-                style={{
-                  padding: "12px 16px",
-                  background: eliminando ? "#fca5a5" : "#dc2626",
+                  background: errorEnDialogo 
+                    ? "#0f766e"
+                    : eliminando ? "#fca5a5" : "#dc2626",
                   color: "white",
                   border: "none",
                   borderRadius: 8,
@@ -414,11 +431,22 @@ export function GestionClases({
                   cursor: eliminando ? "not-allowed" : "pointer",
                 }}
               >
-                {eliminando ? "Eliminando..." : "Confirmar"}
+                {errorEnDialogo 
+                  ? "Cerrar"
+                  : eliminando ? "Eliminando..." : "Confirmar"}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {toast && (
+        <Toast
+          tipo={toast.tipo}
+          mensaje={toast.mensaje}
+          duracion={8000}
+          onClose={() => setToast(null)}
+        />
       )}
     </>
   );

@@ -63,6 +63,12 @@ export async function eliminarClasesSimilares(claseId: number) {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
+  if (claseBase.fechaHora < hoy) {
+  return {
+    error: "No es posible eliminar clases con fecha anterior al día de hoy.",
+  };
+}
+
   const finAnio = new Date(hoy.getFullYear(), 11, 31, 23, 59, 59, 999);
 
   const baseDiaSemana = claseBase.fechaHora.getDay();
@@ -99,7 +105,7 @@ export async function eliminarClasesSimilares(claseId: number) {
   const ids = clasesAEliminar.map((clase) => clase.id);
 
   if (ids.length === 0) {
-    return { error: "No se encontraron clases para eliminar desde hoy hasta fin de anio." };
+    return { error: "No se encontraron clases para eliminar desde hoy hasta fin de año." };
   }
 
   const clasesConDatos = await prisma.clase.findMany({
