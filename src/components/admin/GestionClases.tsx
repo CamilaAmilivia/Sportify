@@ -15,6 +15,9 @@ type Clase = {
   estado: string;
   disciplina: { nombre: string };
   profesor: { nombre: string; apellido: string };
+  serieId?: string | number | null;
+  cupoMaximo?: number;
+  precio?: number;
 };
 
 type GestionClasesProps = {
@@ -176,6 +179,10 @@ export function GestionClases({
   };
 
   const clasesFiltradasYDisponibles = clases.filter((clase) => {
+    // Solo mostrar clases futuras
+    if (new Date(clase.fechaHora) < new Date()) {
+      return false;
+    }
     if (verSoloDisponibles && clase.estado !== "ACTIVA") {
       return false;
     }
