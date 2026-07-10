@@ -50,3 +50,35 @@ export async function obtenerNotificacionCupoLiberado(
 
   return null;
 }
+
+export async function crearNotificacion(usuarioId: number, mensaje: string) {
+  return prisma.notificacion.create({
+    data: {
+      usuarioId,
+      mensaje,
+    },
+  });
+}
+
+export async function obtenerNotificacionesUsuario(usuarioId: number) {
+  return prisma.notificacion.findMany({
+    where: {
+      usuarioId,
+      leida: false,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
+export async function marcarNotificacionLeida(notificacionId: number) {
+  return prisma.notificacion.update({
+    where: {
+      id: notificacionId,
+    },
+    data: {
+      leida: true,
+    },
+  });
+}

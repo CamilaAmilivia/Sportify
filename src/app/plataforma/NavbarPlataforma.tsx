@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { cerrarSesion, verificarNotificacionCupoLiberado } from "./actions";
+import { cerrarSesion, verificarNotificacionCupoLiberado, verificarNotificacionesUsuario, descartarNotificacion } from "./actions";
 import type { UsuarioSesion } from "@/tipos/usuario";
 import { navegacionPorRol, nombreRol } from "@/configuracion/navegacion";
 import type { NotificacionCupoLiberado } from "@/lib/notificaciones";
@@ -25,12 +25,13 @@ export default function NavbarPlataforma({
   const [notificacionCupoLiberado, setNotificacionCupoLiberado] = useState(
     notificacionInicial ?? null
   );
+  const [notificacionesGenerales, setNotificacionesGenerales] = useState<any[]>([]);
   const pathname = usePathname();
   const router = useRouter();
   const itemsNavegacion = navegacionPorRol[usuario.rol];
   const notificacionRef = useRef(notificacionInicial ?? null);
 
-  useEffect(() => {
+  const fetchNotificaciones = () => {
     verificarNotificacionCupoLiberado()
       .then((nueva) => {
         const habiaNotificacion = !!notificacionRef.current;
@@ -41,7 +42,26 @@ export default function NavbarPlataforma({
         }
       })
       .catch(() => {});
+
+    verificarNotificacionesUsuario()
+      .then((nuevas) => {
+        setNotificacionesGenerales(nuevas);
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchNotificaciones();
   }, [pathname]);
+
+  const handleDescartarNotificacion = async (id: number) => {
+    try {
+      await descartarNotificacion(id);
+      setNotificacionesGenerales((prev) => prev.filter((n) => n.id !== id));
+    } catch (err) {
+      console.error("Error al descartar notificación:", err);
+    }
+  };
 
   useEffect(() => {
     if (!menuAbierto && !notificacionAbierta) {
@@ -64,53 +84,120 @@ export default function NavbarPlataforma({
     return () => document.removeEventListener("mousedown", handleClickFuera);
   }, [menuAbierto, notificacionAbierta]);
 
-  const dropdownNotificacion = notificacionAbierta && notificacionCupoLiberado && (
+  const tieneNotificaciones = !!notificacionCupoLiberado || notificacionesGenerales.length > 0;
+
+  const dropdownNotificacion = notificacionAbierta && (
     <div
       style={{
         position: "absolute",
         top: "calc(100% + 8px)",
         right: 0,
-        width: 300,
+        width: 320,
         background: "white",
         borderRadius: 14,
         border: "1px solid rgba(0,0,0,0.08)",
         boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
-        overflow: "hidden",
+        overflowY: "auto",
+        maxHeight: 400,
         zIndex: 200,
         padding: 18,
       }}
     >
-      <p style={{ margin: 0, fontWeight: 800, color: DARK, fontSize: "0.95rem" }}>
-        🎉 ¡Se liberó un cupo!
-      </p>
-      <p style={{ margin: "8px 0 0", fontSize: "0.85rem", color: GRAY }}>
-        Hay un lugar disponible en <strong>{notificacionCupoLiberado.titulo}</strong>
-        {" "}
-        (
-        {new Date(notificacionCupoLiberado.fechaHora).toLocaleDateString("es-AR", {
-          day: "2-digit",
-          month: "2-digit",
-        })}
-        ). Confirmá tu inscripción antes de que se ocupe.
-      </p>
-      <Link
-        href={`/plataforma/cronograma?claseId=${notificacionCupoLiberado.claseId}&vista=resumen&tipoPago=CLASE_INDIVIDUAL&origen=listaEspera`}
-        onClick={() => setNotificacionAbierta(false)}
-        style={{
-          display: "block",
-          textAlign: "center",
-          marginTop: 14,
-          borderRadius: 8,
-          padding: "10px 14px",
-          background: GREEN,
-          color: "white",
-          fontWeight: 700,
-          fontSize: "0.9rem",
-          textDecoration: "none",
-        }}
-      >
-        Confirmar inscripción
-      </Link>
+      <h4 style={{ margin: "0 0 12px", fontSize: "0.95rem", fontWeight: 800, color: DARK }}>Notificaciones</h4>
+      
+      {!tieneNotificaciones ? (
+        <p style={{ margin: 0, fontSize: "0.875rem", color: GRAY, textAlign: "center", padding: "12px 0" }}>
+          No tenés notificaciones pendientes.
+        </p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {notificacionCupoLiberado && (
+            <div style={{
+              background: "#f0fdf4",
+              border: "1px solid #bbf7d0",
+              borderRadius: "8px",
+              padding: "12px",
+              fontSize: "0.85rem",
+              position: "relative"
+            }}>
+              <p style={{ margin: "0 0 4px", fontWeight: 800, color: "#166534" }}>
+                🎉 ¡Se liberó un cupo!
+              </p>
+              <p style={{ margin: 0, color: "#166534", lineHeight: 1.4 }}>
+                Hay un lugar disponible en <strong>{notificacionCupoLiberado.titulo}</strong> (
+                {new Date(notificacionCupoLiberado.fechaHora).toLocaleDateString("es-AR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                })}
+                ).
+              </p>
+              <Link
+                href={`/plataforma/cronograma?claseId=${notificacionCupoLiberado.claseId}&vista=resumen&tipoPago=CLASE_INDIVIDUAL&origen=listaEspera`}
+                onClick={() => setNotificacionAbierta(false)}
+                style={{
+                  display: "block",
+                  textAlign: "center",
+                  marginTop: 10,
+                  borderRadius: 6,
+                  padding: "8px 10px",
+                  background: GREEN,
+                  color: "white",
+                  fontWeight: 700,
+                  fontSize: "0.85rem",
+                  textDecoration: "none",
+                }}
+              >
+                Inscribirme
+              </Link>
+            </div>
+          )}
+
+          {notificacionesGenerales.map((noti) => (
+            <div
+              key={noti.id}
+              style={{
+                background: "#f8fafc",
+                border: "1px solid rgba(0,0,0,0.06)",
+                borderRadius: "8px",
+                padding: "12px",
+                fontSize: "0.85rem",
+                position: "relative"
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => handleDescartarNotificacion(noti.id)}
+                style={{
+                  position: "absolute",
+                  top: 6,
+                  right: 8,
+                  background: "transparent",
+                  border: "none",
+                  fontSize: "1.1rem",
+                  cursor: "pointer",
+                  color: GRAY,
+                  lineHeight: 1,
+                  padding: 2
+                }}
+                title="Descartar"
+              >
+                ×
+              </button>
+              <p style={{ margin: 0, color: DARK, paddingRight: 16, lineHeight: 1.4 }}>
+                {noti.mensaje}
+              </p>
+              <p style={{ margin: "6px 0 0", fontSize: "0.75rem", color: GRAY }}>
+                {new Date(noti.createdAt).toLocaleDateString("es-AR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                })}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -302,18 +389,27 @@ export default function NavbarPlataforma({
               }}
             >
               🔔
-              {notificacionCupoLiberado && (
+              {tieneNotificaciones && (
                 <span
                   style={{
                     position: "absolute",
-                    top: 2,
-                    right: 2,
-                    width: 9,
-                    height: 9,
+                    top: -2,
+                    right: -2,
+                    background: "#ef4444",
+                    color: "white",
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    width: 16,
+                    height: 16,
                     borderRadius: "50%",
-                    background: GREEN,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    lineHeight: 1,
                   }}
-                />
+                >
+                  {(notificacionCupoLiberado ? 1 : 0) + notificacionesGenerales.length}
+                </span>
               )}
             </button>
             {dropdownNotificacion}
@@ -391,18 +487,27 @@ export default function NavbarPlataforma({
               }}
             >
               🔔
-              {notificacionCupoLiberado && (
+              {tieneNotificaciones && (
                 <span
                   style={{
                     position: "absolute",
-                    top: 2,
-                    right: 2,
-                    width: 9,
-                    height: 9,
+                    top: -2,
+                    right: -2,
+                    background: "#ef4444",
+                    color: "white",
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    width: 16,
+                    height: 16,
                     borderRadius: "50%",
-                    background: GREEN,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    lineHeight: 1,
                   }}
-                />
+                >
+                  {(notificacionCupoLiberado ? 1 : 0) + notificacionesGenerales.length}
+                </span>
               )}
             </button>
             {dropdownNotificacion}

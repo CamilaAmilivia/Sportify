@@ -4,15 +4,20 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { TituloPagina } from "@/components/ui/TituloPagina";
 import { FormularioCrearClase } from "@/components/ui/FormularioCrearClase";
-import { eliminarClasesSimilares, obtenerClasesFiltradas } from "@/app/plataforma/clases/actions";
+import { FormularioEditarClase } from "@/components/ui/FormularioEditarClase";
+import { eliminarClasesSimilares, obtenerClasesFiltradas, suspenderClase } from "@/app/plataforma/clases/actions";
 
 type Clase = {
   id: number;
   titulo: string;
   fechaHora: Date | string;
   duracionMin: number;
+  estado: string;
   disciplina: { nombre: string };
   profesor: { nombre: string; apellido: string };
+  serieId?: string | number | null;
+  cupoMaximo?: number;
+  precio?: number;
 };
 
 type GestionClasesProps = {
@@ -42,6 +47,15 @@ export function GestionClases({
   const [claseAEliminar, setClaseAEliminar] = useState<Clase | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
+
+  const [fechaFiltroEspecifica, setFechaFiltroEspecifica] = useState<string>("");
+  const [verSoloDisponibles, setVerSoloDisponibles] = useState<boolean>(true);
+
+  const [claseASuspender, setClaseASuspender] = useState<Clase | null>(null);
+  const [suspendiendo, setSuspendiendo] = useState(false);
+  const [errorSuspender, setErrorSuspender] = useState<string | null>(null);
+
+  const [claseAEditar, setClaseAEditar] = useState<Clase | null>(null);
   
   const router = useRouter();
 
@@ -139,6 +153,53 @@ export function GestionClases({
     }
   };
 
+  const confirmarSuspension = async () => {
+    if (!claseASuspender) return;
+
+    setSuspendiendo(true);
+    setErrorSuspender(null);
+
+    try {
+      const resultado = await suspenderClase(claseASuspender.id);
+
+      if (resultado.error) {
+        setErrorSuspender(resultado.error);
+        return;
+      }
+
+      setClaseASuspender(null);
+      router.refresh();
+      await fetchClases();
+    } catch (error) {
+      console.error("Error suspendiendo clase:", error);
+      setErrorSuspender("No se pudo suspender la clase. Intenta nuevamente.");
+    } finally {
+      setSuspendiendo(false);
+    }
+  };
+
+  const clasesFiltradasYDisponibles = clases.filter((clase) => {
+    // Solo mostrar clases futuras
+    if (new Date(clase.fechaHora) < new Date()) {
+      return false;
+    }
+    if (verSoloDisponibles && clase.estado !== "ACTIVA") {
+      return false;
+    }
+    if (fechaFiltroEspecifica) {
+      const fechaClase = new Date(clase.fechaHora);
+      const [y, m, d] = fechaFiltroEspecifica.split("-").map(Number);
+      if (
+        fechaClase.getFullYear() !== y ||
+        fechaClase.getMonth() !== (m - 1) ||
+        fechaClase.getDate() !== d
+      ) {
+        return false;
+      }
+    }
+    return true;
+  });
+
   return (
     <>
       <TituloPagina
@@ -196,6 +257,56 @@ export function GestionClases({
             </select>
           </div>
 
+          <div>
+            <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Día específico</label>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <input
+                type="date"
+                value={fechaFiltroEspecifica}
+                onChange={(e) => setFechaFiltroEspecifica(e.target.value)}
+                style={{
+                  padding: "11px",
+                  background: "#f8fafc",
+                  color: "var(--color-dark)",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  borderRadius: "8px",
+                  outline: "none",
+                  fontWeight: 500
+                }}
+              />
+              {fechaFiltroEspecifica && (
+                <button
+                  type="button"
+                  onClick={() => setFechaFiltroEspecifica("")}
+                  style={{
+                    padding: "10px 12px",
+                    background: "#f1f5f9",
+                    color: "#475569",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                    cursor: "pointer",
+                    fontWeight: 600
+                  }}
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", height: "45px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--color-dark)", fontSize: "0.95rem", fontWeight: 600, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={verSoloDisponibles}
+                onChange={(e) => setVerSoloDisponibles(e.target.checked)}
+                style={{ width: "18px", height: "18px", cursor: "pointer" }}
+              />
+              Ver solo clases disponibles
+            </label>
+          </div>
+
           {vistaFiltro === "RANGO_FECHAS" && (
             <>
               <div>
@@ -240,8 +351,8 @@ export function GestionClases({
       <div style={{ background: "white", borderRadius: "18px", border: "1px solid rgba(0,0,0,0.06)", boxShadow: "0 8px 24px rgba(0,0,0,0.04)", overflow: "hidden" }}>
         {cargando ? (
           <div style={{ padding: "48px", textAlign: "center", color: "var(--color-gray)", fontWeight: 500 }}>Cargando clases...</div>
-        ) : clases.length === 0 ? (
-          <div style={{ padding: "48px", textAlign: "center", color: "var(--color-gray)", fontWeight: 500 }}>No hay clases para el período seleccionado.</div>
+        ) : clasesFiltradasYDisponibles.length === 0 ? (
+          <div style={{ padding: "48px", textAlign: "center", color: "var(--color-gray)", fontWeight: 500 }}>No hay clases para los filtros seleccionados.</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "600px" }}>
@@ -255,10 +366,25 @@ export function GestionClases({
                 </tr>
               </thead>
               <tbody>
-                {clases.map((clase, index) => (
-                  <tr key={clase.id} style={{ borderBottom: index === clases.length - 1 ? "none" : "1px solid rgba(0,0,0,0.06)" }}>
+                {clasesFiltradasYDisponibles.map((clase, index) => (
+                  <tr key={clase.id} style={{ borderBottom: index === clasesFiltradasYDisponibles.length - 1 ? "none" : "1px solid rgba(0,0,0,0.06)" }}>
                     <td style={{ padding: "16px 20px", color: "var(--color-dark)" }}>
-                      <div style={{ fontWeight: "700", fontSize: "1.05rem", marginBottom: "4px" }}>{clase.disciplina.nombre}</div>
+                      <div style={{ fontWeight: "700", fontSize: "1.05rem", marginBottom: "4px" }}>
+                        {clase.disciplina.nombre}
+                        {clase.estado === "CANCELADA" && (
+                          <span style={{
+                            marginLeft: "8px",
+                            background: "#fee2e2",
+                            color: "#dc2626",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            fontSize: "0.75rem",
+                            fontWeight: 700
+                          }}>
+                            Suspendida
+                          </span>
+                        )}
+                      </div>
                       <div style={{ fontSize: "0.875rem", color: "var(--color-gray)", fontWeight: 500 }}>{clase.titulo}</div>
                     </td>
                     <td style={{ padding: "16px 20px", color: "var(--color-dark)", fontWeight: 500 }}>
@@ -279,7 +405,47 @@ export function GestionClases({
                         {formatearHorario(clase.fechaHora, clase.duracionMin)}
                       </span>
                     </td>
-                    <td style={{ padding: "16px 20px", textAlign: "right" }}>
+                    <td style={{ padding: "16px 20px", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setClaseAEditar(clase);
+                        }}
+                        style={{
+                          padding: "10px 14px",
+                          background: "#eff6ff",
+                          color: "#1d4ed8",
+                          border: "1px solid #bfdbfe",
+                          borderRadius: 8,
+                          fontSize: "0.875rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          marginRight: "8px",
+                        }}
+                      >
+                        ✏️ Editar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={clase.estado === "CANCELADA"}
+                        onClick={() => {
+                          setClaseASuspender(clase);
+                          setErrorSuspender(null);
+                        }}
+                        style={{
+                          padding: "10px 14px",
+                          background: clase.estado === "CANCELADA" ? "#f1f5f9" : "#fff7ed",
+                          color: clase.estado === "CANCELADA" ? "#94a3b8" : "#c2410c",
+                          border: clase.estado === "CANCELADA" ? "1px solid #e2e8f0" : "1px solid #ffedd5",
+                          borderRadius: 8,
+                          fontSize: "0.875rem",
+                          fontWeight: 700,
+                          cursor: clase.estado === "CANCELADA" ? "not-allowed" : "pointer",
+                          marginRight: "8px",
+                        }}
+                      >
+                        ⏸️ Suspender
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -295,10 +461,9 @@ export function GestionClases({
                           fontSize: "0.875rem",
                           fontWeight: 700,
                           cursor: "pointer",
-                          whiteSpace: "nowrap",
                         }}
                       >
-                        Eliminar clase
+                        🗑️ Eliminar
                       </button>
                     </td>
                   </tr>
@@ -318,6 +483,20 @@ export function GestionClases({
             setMostrarFormulario(false);
             router.refresh();
             fetchClases(); // Refrescar las clases del lado del cliente
+          }}
+        />
+      )}
+
+      {claseAEditar && (
+        <FormularioEditarClase
+          clase={claseAEditar}
+          disciplinas={disciplinas}
+          profesores={profesores}
+          onClose={() => setClaseAEditar(null)}
+          onSuccess={() => {
+            setClaseAEditar(null);
+            router.refresh();
+            fetchClases();
           }}
         />
       )}
@@ -359,9 +538,17 @@ export function GestionClases({
             >
               Eliminar clase
             </h3>
-            <p style={{ margin: 0, color: "var(--color-gray)", lineHeight: 1.6, fontWeight: 500 }}>
-              Esta seguro que quiere eliminar esta clase? se borraran todas las instancias hasta 31/12/
-              {new Date().getFullYear()}.
+            <p style={{ margin: "0 0 16px", color: "var(--color-dark)", fontWeight: 600 }}>
+              ¿Está seguro que quiere eliminar esta clase?
+            </p>
+            <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", marginBottom: "16px", border: "1px solid rgba(0,0,0,0.06)", fontSize: "0.95rem" }}>
+              <p style={{ margin: "0 0 8px" }}><strong>Clase:</strong> {claseAEliminar.disciplina.nombre} ({claseAEliminar.titulo})</p>
+              <p style={{ margin: "0 0 8px" }}><strong>Profesor:</strong> {claseAEliminar.profesor.nombre} {claseAEliminar.profesor.apellido}</p>
+              <p style={{ margin: "0 0 8px" }}><strong>Fecha:</strong> {formatearFecha(claseAEliminar.fechaHora)}</p>
+              <p style={{ margin: 0 }}><strong>Horario:</strong> {formatearHorario(claseAEliminar.fechaHora, claseAEliminar.duracionMin)}</p>
+            </div>
+            <p style={{ margin: 0, color: "#dc2626", fontSize: "0.95rem", fontWeight: 700 }}>
+              Se borrarán todas las instancias hasta 31/12/2026.
             </p>
 
             {errorEliminar && (
@@ -415,6 +602,113 @@ export function GestionClases({
                 }}
               >
                 {eliminando ? "Eliminando..." : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {claseASuspender && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirmar-suspender-clase"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            zIndex: 1001,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 460,
+              background: "white",
+              borderRadius: 8,
+              padding: "28px",
+              boxShadow: "0 24px 70px rgba(15, 23, 42, 0.25)",
+            }}
+          >
+            <h3
+              id="confirmar-suspender-clase"
+              style={{
+                margin: "0 0 12px",
+                color: "var(--color-dark)",
+                fontSize: "1.25rem",
+                fontWeight: 800,
+              }}
+            >
+              Suspender clase
+            </h3>
+            <p style={{ margin: "0 0 16px", color: "var(--color-dark)", fontWeight: 600 }}>
+              ¿Está seguro que quiere suspender esta clase? Se suspenderá la clase sólo para el día seleccionado.
+            </p>
+            <div style={{ background: "#fff7ed", padding: "16px", borderRadius: "8px", marginBottom: "16px", border: "1px solid #ffedd5", fontSize: "0.95rem" }}>
+              <p style={{ margin: "0 0 8px" }}><strong>Clase:</strong> {claseASuspender.disciplina.nombre} ({claseASuspender.titulo})</p>
+              <p style={{ margin: "0 0 8px" }}><strong>Profesor:</strong> {claseASuspender.profesor.nombre} {claseASuspender.profesor.apellido}</p>
+              <p style={{ margin: "0 0 8px" }}><strong>Fecha:</strong> {formatearFecha(claseASuspender.fechaHora)}</p>
+              <p style={{ margin: 0 }}><strong>Horario:</strong> {formatearHorario(claseASuspender.fechaHora, claseASuspender.duracionMin)}</p>
+            </div>
+            <p style={{ margin: 0, color: "var(--color-gray)", fontSize: "0.875rem", lineHeight: 1.5 }}>
+              Se notificará al profesor y a los alumnos inscritos (los alumnos abonados recibirán un crédito gratis de clase, los no abonados recibirán su reintegro en efectivo).
+            </p>
+
+            {errorSuspender && (
+              <p
+                style={{
+                  margin: "16px 0 0",
+                  color: "#b91c1c",
+                  background: "#fee2e2",
+                  border: "1px solid #fecaca",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  fontWeight: 600,
+                }}
+              >
+                {errorSuspender}
+              </p>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
+              <button
+                type="button"
+                disabled={suspendiendo}
+                onClick={() => {
+                  setClaseASuspender(null);
+                  setErrorSuspender(null);
+                }}
+                style={{
+                  padding: "12px 16px",
+                  background: "#f8fafc",
+                  color: "var(--color-dark)",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  cursor: suspendiendo ? "not-allowed" : "pointer",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={suspendiendo}
+                onClick={confirmarSuspension}
+                style={{
+                  padding: "12px 16px",
+                  background: suspendiendo ? "#fed7aa" : "#ea580c",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  cursor: suspendiendo ? "not-allowed" : "pointer",
+                }}
+              >
+                {suspendiendo ? "Suspendiendo..." : "Confirmar"}
               </button>
             </div>
           </div>

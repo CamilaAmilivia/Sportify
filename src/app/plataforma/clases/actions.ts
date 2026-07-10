@@ -63,7 +63,7 @@ export async function eliminarClasesSimilares(claseId: number) {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
-  const finAnio = new Date(hoy.getFullYear(), 11, 31, 23, 59, 59, 999);
+  const finAnio = new Date(2026, 11, 31, 23, 59, 59, 999);
 
   const baseDiaSemana = claseBase.fechaHora.getDay();
   const baseHora = claseBase.fechaHora.getHours();
@@ -179,4 +179,425 @@ await sendClaseCanceladaEmail(
   revalidatePath("/plataforma/mis-clases");
 
   return { success: true, cantidadEliminadas: ids.length };
+}
+
+export async function suspenderClase(claseId: number) {
+  await requerirRol(["ADMIN"]);
+
+  if (!Number.isInteger(claseId) || claseId <= 0) {
+    return { error: "La clase seleccionada no es válida." };
+  }
+
+  const clase = await prisma.clase.findUnique({
+    where: { id: claseId },
+    include: {
+      disciplina: true,
+      profesor: true,
+      inscripciones: {
+        where: { estado: "ACTIVA" },
+        include: {
+          usuario: true,
+          pago: true,
+        }
+      }
+    }
+  });
+
+  if (!clase) {
+    return { error: "La clase seleccionada no existe." };
+  }
+
+  if (clase.estado === "CANCELADA") {
+    return { error: "La clase ya se encuentra suspendida." };
+  }
+
+  await prisma.clase.update({
+    where: { id: claseId },
+    data: { estado: "CANCELADA" }
+  });
+
+  const fechaClaseStr = new Date(clase.fechaHora).toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  });
+  
+  const horarioInicioStr = new Date(clase.fechaHora).toLocaleTimeString("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
+
+  const { crearNotificacion } = await import("@/lib/notificaciones");
+  const { otorgarCreditoClase } = await import("@/lib/creditos");
+
+  for (const inscripcion of clase.inscripciones) {
+    await prisma.inscripcion.update({
+      where: { id: inscripcion.id },
+      data: { estado: "CANCELADA" }
+    });
+
+    const esAbonado = inscripcion.pago?.tipo === "MENSUALIDAD";
+    let mensaje = "";
+
+    if (esAbonado) {
+      await otorgarCreditoClase({
+        usuarioId: inscripcion.usuarioId,
+        claseOrigenId: clase.id,
+        motivo: `Reintegro por clase "${clase.titulo}" suspendida el ${fechaClaseStr}.`
+      });
+      mensaje = `La clase de ${clase.disciplina.nombre} del ${fechaClaseStr} a las ${horarioInicioStr} ha sido suspendida. Se te ha otorgado un crédito de clase gratis.`;
+    } else {
+      mensaje = `La clase de ${clase.disciplina.nombre} del ${fechaClaseStr} a las ${horarioInicioStr} ha sido suspendida. Recibirás tu reintegro en efectivo en el gimnasio.`;
+    }
+
+    await crearNotificacion(inscripcion.usuarioId, mensaje);
+  }
+
+  const mensajeProfesor = `La clase de ${clase.disciplina.nombre} del ${fechaClaseStr} a las ${horarioInicioStr} que tenías asignada ha sido suspendida.`;
+  await crearNotificacion(clase.profesorId, mensajeProfesor);
+
+  revalidatePath("/plataforma/clases");
+  revalidatePath("/plataforma/cronograma");
+  revalidatePath("/plataforma/mis-clases");
+
+  return { success: true };
+}
+
+export async function obtenerLimitesCupoClase(claseId: number) {
+  await requerirRol(["ADMIN"]);
+
+  if (!Number.isInteger(claseId) || claseId <= 0) {
+    throw new Error("ID de clase inválido.");
+  }
+
+  const clase = await prisma.clase.findUnique({
+    where: { id: claseId },
+    select: {
+      id: true,
+      fechaHora: true,
+      duracionMin: true,
+    },
+  });
+
+  if (!clase) {
+    throw new Error("La clase seleccionada no existe.");
+  }
+
+  const inscriptosActuales = await prisma.inscripcion.count({
+    where: {
+      claseId,
+      estado: "ACTIVA",
+    },
+  });
+
+  const inicioClase = new Date(clase.fechaHora);
+  const finClase = new Date(inicioClase.getTime() + clase.duracionMin * 60000);
+  const inicioDia = new Date(inicioClase);
+  inicioDia.setHours(0, 0, 0, 0);
+  const finDia = new Date(inicioClase);
+  finDia.setHours(23, 59, 59, 999);
+
+  const clasesDelDia = await prisma.clase.findMany({
+    where: {
+      id: { not: claseId },
+      estado: "ACTIVA",
+      fechaHora: {
+        gte: inicioDia,
+        lte: finDia,
+      },
+    },
+    select: {
+      id: true,
+      fechaHora: true,
+      duracionMin: true,
+      cupoMaximo: true,
+    },
+  });
+
+  const clasesSuperpuestas = clasesDelDia.filter((c) => {
+    const inicioExistente = new Date(c.fechaHora);
+    const finExistente = new Date(c.fechaHora);
+    finExistente.setMinutes(finExistente.getMinutes() + c.duracionMin);
+    return inicioClase < finExistente && finClase > inicioExistente;
+  });
+
+  const puntosDeControl = [
+    inicioClase,
+    ...clasesSuperpuestas.flatMap((c) => {
+      const inicioExistente = new Date(c.fechaHora);
+      const finExistente = new Date(c.fechaHora);
+      finExistente.setMinutes(finExistente.getMinutes() + c.duracionMin);
+      return [inicioExistente, finExistente];
+    }),
+  ].filter((punto) => punto >= inicioClase && punto < finClase);
+
+  const cuposOtros = puntosDeControl.reduce((maximo, punto) => {
+    const cuposEnPunto = clasesSuperpuestas.reduce((total, c) => {
+      const inicioExistente = new Date(c.fechaHora);
+      const finExistente = new Date(c.fechaHora);
+      finExistente.setMinutes(finExistente.getMinutes() + c.duracionMin);
+
+      if (inicioExistente <= punto && finExistente > punto) {
+        return total + c.cupoMaximo;
+      }
+
+      return total;
+    }, 0);
+
+    return Math.max(maximo, cuposEnPunto);
+  }, 0);
+
+  const maximoPermitido = Math.max(inscriptosActuales, 30 - cuposOtros);
+
+  return {
+    inscriptosActuales,
+    maximoPermitido,
+  };
+}
+
+export async function editarClase(
+  claseId: number,
+  formData: {
+    titulo: string;
+    profesorId: number;
+    cupoMaximo: number;
+  },
+  aplicarAFuturas: boolean = false
+) {
+  await requerirRol(["ADMIN"]);
+
+  try {
+    const errores: any = {};
+
+    if (!formData.titulo) errores.titulo = ["El título de la clase es requerido"];
+    if (!formData.profesorId || isNaN(formData.profesorId)) errores.profesorId = ["Debes seleccionar un profesor"];
+    if (!formData.cupoMaximo || formData.cupoMaximo <= 0) {
+      errores.cupoMaximo = ["El cupo máximo debe ser mayor a 0"];
+    }
+
+    const claseActual = await prisma.clase.findUnique({
+      where: { id: claseId },
+    });
+
+    if (!claseActual) {
+      return { error: "La clase a editar no existe." };
+    }
+
+    let profesorEncontrado = null;
+    if (!errores.profesorId) {
+      profesorEncontrado = await prisma.usuario.findUnique({
+        where: { id: formData.profesorId },
+      });
+
+      if (!profesorEncontrado) {
+        errores.profesorId = [`Profesor no encontrado`];
+      } else if (profesorEncontrado.rol !== "PROFESOR") {
+        errores.profesorId = ["El usuario seleccionado no es un profesor"];
+      }
+    }
+
+    if (Object.keys(errores).length > 0 || !profesorEncontrado) {
+      return { errores };
+    }
+
+    // SI APLICAR A FUTURAS ES TRUE
+    if (aplicarAFuturas && claseActual.serieId) {
+      const clasesFuturas = await prisma.clase.findMany({
+        where: {
+          serieId: claseActual.serieId,
+          fechaHora: { gte: claseActual.fechaHora },
+          estado: "ACTIVA",
+        },
+      });
+
+      for (const c of clasesFuturas) {
+        const fechaClase = new Date(c.fechaHora);
+        const fechaClaseStr = `${fechaClase.getDate().toString().padStart(2, '0')}/${(fechaClase.getMonth() + 1).toString().padStart(2, '0')}/${fechaClase.getFullYear()}`;
+
+        // 1. Validar profesor ocupado
+        const inicioDia = new Date(fechaClase);
+        inicioDia.setHours(0, 0, 0, 0);
+        const finDia = new Date(fechaClase);
+        finDia.setHours(23, 59, 59, 999);
+
+        const clasesProfesor = await prisma.clase.findMany({
+          where: {
+            id: { not: c.id },
+            profesorId: formData.profesorId,
+            estado: "ACTIVA",
+            fechaHora: {
+              gte: inicioDia,
+              lte: finDia,
+            },
+          },
+        });
+
+        const nuevaInicio = new Date(fechaClase);
+        const nuevaFin = new Date(fechaClase.getTime() + c.duracionMin * 60000);
+
+        const profesorOcupado = clasesProfesor.some((other) => {
+          const existenteInicio = new Date(other.fechaHora);
+          const existenteFin = new Date(other.fechaHora);
+          existenteFin.setMinutes(existenteFin.getMinutes() + other.duracionMin);
+
+          return nuevaInicio < existenteFin && nuevaFin > existenteInicio;
+        });
+
+        if (profesorOcupado) {
+          return {
+            error: `El profesor ${profesorEncontrado.nombre} ${profesorEncontrado.apellido} ya tiene una clase asignada el ${fechaClaseStr} a las ${fechaClase.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}. No se pudo modificar la serie.`,
+          };
+        }
+
+        // 2. Validar cupo mínimo (inscriptos en esa fecha)
+        const inscriptosEnFecha = await prisma.inscripcion.count({
+          where: {
+            claseId: c.id,
+            estado: "ACTIVA",
+          },
+        });
+
+        if (formData.cupoMaximo < inscriptosEnFecha) {
+          return {
+            error: `La clase del día ${fechaClaseStr} ya tiene ${inscriptosEnFecha} alumnos inscritos. No puedes reducir el cupo de la serie a ${formData.cupoMaximo} debido a esta clase.`,
+          };
+        }
+
+        // 3. Validar cupo máximo (suma de cupos <= 30)
+        const clasesDelDia = await prisma.clase.findMany({
+          where: {
+            id: { not: c.id },
+            estado: "ACTIVA",
+            fechaHora: {
+              gte: inicioDia,
+              lte: finDia,
+            },
+          },
+        });
+
+        const clasesSuperpuestas = clasesDelDia.filter((other) => {
+          const inicioExistente = new Date(other.fechaHora);
+          const finExistente = new Date(other.fechaHora);
+          finExistente.setMinutes(finExistente.getMinutes() + other.duracionMin);
+          return nuevaInicio < finExistente && nuevaFin > inicioExistente;
+        });
+
+        const puntosDeControl = [
+          nuevaInicio,
+          ...clasesSuperpuestas.flatMap((other) => {
+            const inicioExistente = new Date(other.fechaHora);
+            const finExistente = new Date(other.fechaHora);
+            finExistente.setMinutes(finExistente.getMinutes() + other.duracionMin);
+            return [inicioExistente, finExistente];
+          }),
+        ].filter((punto) => punto >= nuevaInicio && punto < nuevaFin);
+
+        const cuposOtros = puntosDeControl.reduce((maximo, punto) => {
+          const cuposEnPunto = clasesSuperpuestas.reduce((total, other) => {
+            const inicioExistente = new Date(other.fechaHora);
+            const finExistente = new Date(other.fechaHora);
+            finExistente.setMinutes(finExistente.getMinutes() + other.duracionMin);
+
+            if (inicioExistente <= punto && finExistente > punto) {
+              return total + other.cupoMaximo;
+            }
+
+            return total;
+          }, 0);
+
+          return Math.max(maximo, cuposEnPunto);
+        }, 0);
+
+        if (formData.cupoMaximo + cuposOtros > 30) {
+          return {
+            error: `La clase del día ${fechaClaseStr} no se puede actualizar. Excede los 30 cupos totales por hora permitidos (clases paralelas ocupan ${cuposOtros} cupos en esa fecha).`,
+          };
+        }
+      }
+
+      // Si todo está ok, guardar en transacción
+      await prisma.$transaction(
+        clasesFuturas.map((c) =>
+          prisma.clase.update({
+            where: { id: c.id },
+            data: {
+              titulo: formData.titulo,
+              profesorId: formData.profesorId,
+              cupoMaximo: formData.cupoMaximo,
+            },
+          })
+        )
+      );
+    } else {
+      // EDICIÓN INDIVIDUAL (COMPORTAMIENTO ANTERIOR)
+      const { inscriptosActuales, maximoPermitido } = await obtenerLimitesCupoClase(claseId);
+
+      if (formData.cupoMaximo < inscriptosActuales) {
+        errores.cupoMaximo = [`El cupo no puede ser menor a la cantidad de inscriptos actuales (${inscriptosActuales}).`];
+      }
+
+      if (formData.cupoMaximo > maximoPermitido) {
+        errores.cupoMaximo = [`El cupo no puede superar el límite disponible (${maximoPermitido}) para evitar exceder 30 cupos en total.`];
+      }
+
+      const fechaClase = new Date(claseActual.fechaHora);
+      const duracionMin = claseActual.duracionMin;
+      const inicioDia = new Date(fechaClase);
+      inicioDia.setHours(0, 0, 0, 0);
+      const finDia = new Date(fechaClase);
+      finDia.setHours(23, 59, 59, 999);
+
+      const clasesProfesor = await prisma.clase.findMany({
+        where: {
+          id: { not: claseId },
+          profesorId: formData.profesorId,
+          estado: "ACTIVA",
+          fechaHora: {
+            gte: inicioDia,
+            lte: finDia,
+          },
+        },
+      });
+
+      const nuevaInicio = new Date(fechaClase);
+      const nuevaFin = new Date(fechaClase.getTime() + duracionMin * 60000);
+
+      const profesorOcupado = clasesProfesor.some((clase) => {
+        const existenteInicio = new Date(clase.fechaHora);
+        const existenteFin = new Date(clase.fechaHora);
+        existenteFin.setMinutes(existenteFin.getMinutes() + clase.duracionMin);
+
+        return nuevaInicio < existenteFin && nuevaFin > existenteInicio;
+      });
+
+      if (profesorOcupado) {
+        errores.profesorId = [
+          `${profesorEncontrado.nombre} ya tiene una clase asignada el ${fechaClase.getDate().toString().padStart(2, '0')}/${(fechaClase.getMonth() + 1).toString().padStart(2, '0')}/${fechaClase.getFullYear()} a las ${fechaClase.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}`,
+        ];
+      }
+
+      if (Object.keys(errores).length > 0) {
+        return { errores };
+      }
+
+      await prisma.clase.update({
+        where: { id: claseId },
+        data: {
+          titulo: formData.titulo,
+          profesorId: formData.profesorId,
+          cupoMaximo: formData.cupoMaximo,
+        },
+      });
+    }
+
+    revalidatePath("/plataforma/clases");
+    revalidatePath("/plataforma/cronograma");
+    revalidatePath("/plataforma/mis-clases");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error al editar clase:", error);
+    return { error: "Error al editar la clase. Intenta nuevamente." };
+  }
 }
