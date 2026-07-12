@@ -8,13 +8,11 @@ import { obtenerCuposDisponiblesPublico, limpiarNotificacionesVencidas } from '@
 
 export async function getClasesSemana(fecha: Date) {
 const inicio = startOfWeek(fecha, { weekStartsOn: 1 })
-inicio.setUTCHours(0, 0, 0, 0)
+inicio.setHours(0, 0, 0, 0)
 
 const fin = new Date(inicio)
-fin.setUTCDate(fin.getUTCDate() + 6)
-fin.setUTCHours(23, 59, 59, 999)
-
-// Ajuste zona horaria Argentina (UTC-3)
+fin.setDate(fin.getDate() + 6)
+fin.setHours(23, 59, 59, 999)
 
   const clases = await prisma.clase.findMany({
     where: {
