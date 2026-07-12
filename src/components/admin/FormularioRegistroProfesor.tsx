@@ -235,9 +235,6 @@ export function FormularioRegistroProfesor({
                 boxSizing: "border-box",
               }}
             />
-            <span style={{ fontSize: "0.8rem", color: "var(--color-gray)", display: "block", marginTop: 4 }}>
-              El DNI se utilizará como la contraseña temporal del profesor.
-            </span>
             {state.errores?.dni && (
               <span className="form-error" style={{ display: "block", marginTop: 4 }}>
                 ⚠ {state.errores.dni[0]}
