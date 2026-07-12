@@ -98,7 +98,8 @@ export async function sendClaseCanceladaEmail(
   nombre: string,
   claseTitulo: string,
   claseFechaHora: Date,
-  tieneToken: boolean
+  tieneToken: boolean,
+  montoReintegro?: number
 ) {
   const fechaTexto = claseFechaHora.toLocaleString("es-AR", {
     dateStyle: "long",
@@ -113,14 +114,23 @@ export async function sendClaseCanceladaEmail(
     return;
   }
 
-  const mensajeToken = tieneToken
-  ? `
-    <p>Por ser abonado, se acreditó un token para compensar la cancelación de la clase.</p>
-    <p>el mismo puede ser canjeado por una clase individual a elección.</p>
-  `
-  : "";
+  const montoTexto = montoReintegro != null
+    ? `$${montoReintegro.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : null;
 
-  const info = await transporter.sendMail({
+  const mensajeReintegro = tieneToken
+    ? `<p>Por ser abonado, se acreditó un crédito de clase gratis para compensar la cancelación.</p>`
+    : montoTexto
+      ? `<p>Recibirás tu reintegro de <strong>${montoTexto}</strong> en efectivo en el gimnasio.</p>`
+      : `<p>Recibirás tu reintegro en efectivo en el gimnasio.</p>`;
+
+  const mensajeReintegroTexto = tieneToken
+    ? "Se acreditó un crédito de clase gratis para compensar la cancelación."
+    : montoTexto
+      ? `Recibirás tu reintegro de ${montoTexto} en efectivo en el gimnasio.`
+      : "Recibirás tu reintegro en efectivo en el gimnasio.";
+
+  await transporter.sendMail({
     from: smtpFrom,
     to,
     subject: "Cancelación de clase - Sportify",
@@ -128,7 +138,7 @@ export async function sendClaseCanceladaEmail(
 
 La clase "${claseTitulo}" del ${fechaTexto} fue cancelada.
 
-${tieneToken ? "Se acreditó un token para compensar la cancelación." : ""}
+${mensajeReintegroTexto}
 
 Disculpá las molestias.`,
 
@@ -140,7 +150,7 @@ Disculpá las molestias.`,
       del <strong>${fechaTexto}</strong>
       fue cancelada.</p>
 
-      ${mensajeToken}
+      ${mensajeReintegro}
 
       <p>Disculpá las molestias.</p>
     `,
@@ -153,7 +163,8 @@ export async function sendClaseSuspendidaEmail(
   claseTitulo: string,
   disciplina: string,
   claseFechaHora: Date,
-  tieneToken: boolean
+  tieneToken: boolean,
+  montoReintegro?: number
 ) {
   const fechaTexto = claseFechaHora.toLocaleString("es-AR", {
     dateStyle: "long",
@@ -168,16 +179,23 @@ export async function sendClaseSuspendidaEmail(
     return;
   }
 
-  const mensajeCredito = tieneToken
-    ? `
-    <p>Por ser abonado, se acreditó un crédito de clase gratis para compensar la suspensión.</p>
-    <p>El mismo puede ser utilizado en cualquier otra clase a tu elección.</p>
-  `
-    : `
-    <p>Recibirás tu reintegro en efectivo en el gimnasio.</p>
-  `;
+  const montoTexto = montoReintegro != null
+    ? `$${montoReintegro.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : null;
 
-  const info = await transporter.sendMail({
+  const mensajeCredito = tieneToken
+    ? `<p>Por ser abonado, se acreditó un crédito de clase gratis para compensar la suspensión. El mismo puede ser utilizado en cualquier otra clase a tu elección.</p>`
+    : montoTexto
+      ? `<p>Recibirás tu reintegro de <strong>${montoTexto}</strong> en efectivo en el gimnasio.</p>`
+      : `<p>Recibirás tu reintegro en efectivo en el gimnasio.</p>`;
+
+  const mensajeCreditoTexto = tieneToken
+    ? "Se acreditó un crédito de clase gratis para compensar la suspensión."
+    : montoTexto
+      ? `Recibirás tu reintegro de ${montoTexto} en efectivo en el gimnasio.`
+      : "Recibirás tu reintegro en efectivo en el gimnasio.";
+
+  await transporter.sendMail({
     from: smtpFrom,
     to,
     subject: "Suspensión de clase - Sportify",
@@ -185,7 +203,7 @@ export async function sendClaseSuspendidaEmail(
 
 La clase de ${disciplina} "${claseTitulo}" del ${fechaTexto} fue suspendida.
 
-${tieneToken ? "Se acreditó un crédito de clase gratis para compensar la suspensión." : "Recibirás tu reintegro en efectivo en el gimnasio."}
+${mensajeCreditoTexto}
 
 Disculpá las molestias.`,
 
@@ -201,6 +219,54 @@ Disculpá las molestias.`,
       ${mensajeCredito}
 
       <p>Disculpá las molestias.</p>
+    `,
+  });
+}
+
+export async function sendReintegroInscripcionEmail(
+  to: string,
+  nombre: string,
+  claseTitulo: string,
+  claseFechaHora: Date,
+  montoReintegro: number
+) {
+  const fechaTexto = claseFechaHora.toLocaleString("es-AR", {
+    dateStyle: "long",
+    timeStyle: "short",
+  });
+
+  const montoTexto = `$${montoReintegro.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  if (!smtpHost || !smtpUser) {
+    console.log("=========================================");
+    console.log(`Reintegro por cancelación para ${to}: ${montoTexto}`);
+    console.log(`${claseTitulo} - ${fechaTexto}`);
+    console.log("=========================================");
+    return;
+  }
+
+  await transporter.sendMail({
+    from: smtpFrom,
+    to,
+    subject: "Cancelación de inscripción - Reintegro - Sportify",
+    text: `Hola ${nombre}.
+
+Cancelaste tu inscripción a la clase "${claseTitulo}" del ${fechaTexto}.
+
+Recibirás tu reintegro de ${montoTexto} en efectivo en el gimnasio.
+
+¡Hasta pronto!`,
+
+    html: `
+      <p>Hola <strong>${nombre}</strong>.</p>
+
+      <p>Cancelaste tu inscripción a la clase
+      <strong>${claseTitulo}</strong>
+      del <strong>${fechaTexto}</strong>.</p>
+
+      <p>Recibirás tu reintegro de <strong>${montoTexto}</strong> en efectivo en el gimnasio.</p>
+
+      <p>¡Hasta pronto!</p>
     `,
   });
 }

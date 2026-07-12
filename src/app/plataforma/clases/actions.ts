@@ -123,49 +123,85 @@ export async function eliminarClasesSimilares(claseId: number) {
   },
 });
 
-const clientesNotificados = new Map<
-  number,
-  {
-    usuario: Usuario;
-    esAbonado: boolean;
-  }
->();
+const { crearNotificacion } = await import("@/lib/notificaciones");
 
-// Reunir todos los clientes inscriptos sin duplicarlos
+// Notificar a cada inscripto y otorgar crédito por cada clase cancelada
+const emailsNotificados = new Set<number>();
+
+for (const clase of clasesConDatos) {
+  const fechaStr = clase.fechaHora.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+  for (const inscripcion of clase.inscripciones) {
+    const esAbonado = inscripcion.pago?.tipo === TipoPago.MENSUALIDAD;
+
+    // Crédito por cada clase cancelada (abonados)
+    if (esAbonado) {
+      await prisma.creditoClase.create({
+        data: {
+          usuarioId: inscripcion.usuario.id,
+          motivo: `Cancelación de clase "${claseBase.titulo}" del ${fechaStr}.`,
+          claseOrigenId: clase.id,
+          usado: false,
+        },
+      });
+    }
+
+    // Bell notification por cada usuario (solo una vez total)
+    if (!emailsNotificados.has(inscripcion.usuario.id)) {
+      const mensaje = esAbonado
+        ? `La serie de clases "${claseBase.titulo}" fue cancelada. Recibirás un crédito por cada clase cancelada.`
+        : `La serie de clases "${claseBase.titulo}" fue cancelada. Recibirás tu reintegro en efectivo en el gimnasio.`;
+      await crearNotificacion(inscripcion.usuario.id, mensaje);
+      emailsNotificados.add(inscripcion.usuario.id);
+    }
+  }
+
+  // Notificar a usuarios en lista de espera de esta clase
+  const enEspera = await prisma.listaEspera.findMany({
+    where: { claseId: clase.id },
+    include: { usuario: true },
+  });
+  for (const entrada of enEspera) {
+    if (!emailsNotificados.has(entrada.usuarioId)) {
+      await crearNotificacion(
+        entrada.usuarioId,
+        `La clase "${claseBase.titulo}" del ${fechaStr} en la que estabas en lista de espera fue cancelada.`
+      );
+      emailsNotificados.add(entrada.usuarioId);
+    }
+  }
+}
+
+// Email a cada cliente único (una vez por usuario)
+const usuariosEmail = new Map<number, { usuario: Usuario; esAbonado: boolean }>();
 for (const clase of clasesConDatos) {
   for (const inscripcion of clase.inscripciones) {
-    if (!clientesNotificados.has(inscripcion.usuario.id)) {
-      clientesNotificados.set(inscripcion.usuario.id, {
+    if (!usuariosEmail.has(inscripcion.usuario.id)) {
+      usuariosEmail.set(inscripcion.usuario.id, {
         usuario: inscripcion.usuario,
         esAbonado: inscripcion.pago?.tipo === TipoPago.MENSUALIDAD,
       });
     }
   }
 }
-
-// Notificar a cada cliente y otorgar crédito a los abonados
-for (const { usuario, esAbonado } of clientesNotificados.values()) {
-  await sendClaseCanceladaEmail(
-    usuario.email,
-    usuario.nombre,
-    claseBase.titulo,
-    claseBase.fechaHora,
-    esAbonado
-  );
-
-  if (esAbonado) {
-    await prisma.creditoClase.create({
-      data: {
-        usuarioId: usuario.id,
-        motivo: `Cancelación de serie de clases: ${claseBase.titulo}`,
-        claseOrigenId: claseBase.id,
-        usado: false,
-      },
-    });
+for (const clase of clasesConDatos) {
+  for (const inscripcion of clase.inscripciones) {
+    const esAbonado = inscripcion.pago?.tipo === TipoPago.MENSUALIDAD;
+    if (!usuariosEmail.has(inscripcion.usuario.id)) continue;
+    await sendClaseCanceladaEmail(
+      inscripcion.usuario.email,
+      inscripcion.usuario.nombre,
+      claseBase.titulo,
+      claseBase.fechaHora,
+      esAbonado,
+      esAbonado ? undefined : inscripcion.pago?.monto
+    );
+    usuariosEmail.delete(inscripcion.usuario.id);
   }
 }
 
 // Notificar al profesor una única vez
+await crearNotificacion(claseBase.profesorId, `La serie de clases "${claseBase.titulo}" fue cancelada.`);
 await sendClaseCanceladaEmail(
   claseBase.profesor.email,
   claseBase.profesor.nombre,
@@ -218,13 +254,17 @@ export async function suspenderClase(claseId: number) {
     return { error: "La clase seleccionada no existe." };
   }
 
-  if (clase.estado === "CANCELADA") {
+  if (clase.estado === "SUSPENDIDA") {
     return { error: "La clase ya se encuentra suspendida." };
+  }
+
+  if (clase.estado === "CANCELADA") {
+    return { error: "La clase ya está cancelada." };
   }
 
   await prisma.clase.update({
     where: { id: claseId },
-    data: { estado: "CANCELADA" }
+    data: { estado: "SUSPENDIDA" }
   });
 
   const fechaClaseStr = new Date(clase.fechaHora).toLocaleDateString("es-AR", {
@@ -275,7 +315,8 @@ export async function suspenderClase(claseId: number) {
         clase.titulo,
         clase.disciplina.nombre,
         clase.fechaHora,
-        esAbonado
+        esAbonado,
+        esAbonado ? undefined : inscripcion.pago?.monto
       );
     } catch (error) {
       console.error(`No se pudo enviar mail a ${inscripcion.usuario.email}:`, error);
@@ -300,6 +341,21 @@ export async function suspenderClase(claseId: number) {
     console.error(`No se pudo enviar mail al profesor ${clase.profesor.email}:`, error);
     // La suspensión se completó correctamente, el mail es secundario
   }
+
+  // Notificar y limpiar lista de espera
+  const enEspera = await prisma.listaEspera.findMany({
+    where: { claseId },
+    include: { usuario: true },
+  });
+
+  for (const entrada of enEspera) {
+    await crearNotificacion(
+      entrada.usuarioId,
+      `La clase "${clase.titulo}" del ${fechaClaseStr} a las ${horarioInicioStr} en la que estabas en lista de espera ha sido suspendida.`
+    );
+  }
+
+  await prisma.listaEspera.deleteMany({ where: { claseId } });
 
   revalidatePath("/plataforma/clases");
   revalidatePath("/plataforma/cronograma");

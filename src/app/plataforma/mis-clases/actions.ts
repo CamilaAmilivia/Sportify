@@ -38,7 +38,7 @@ export async function cancelarInscripcion(inscripcionId: number) {
 
   const inscripcion = await prisma.inscripcion.findUnique({
     where: { id: inscripcionId },
-    include: { clase: true },
+    include: { clase: true, pago: true },
   });
 
   if (!inscripcion || inscripcion.usuarioId !== usuario.id) {
@@ -57,6 +57,24 @@ export async function cancelarInscripcion(inscripcionId: number) {
   });
 
   await notificarElegiblesListaEspera(inscripcion.claseId);
+
+  // Mail de reintegro: solo clase individual cancelada con +24hs de anticipación
+  const esIndividual = inscripcion.pago?.tipo === "CLASE_INDIVIDUAL";
+  const horasHasta = (inscripcion.clase.fechaHora.getTime() - Date.now()) / (60 * 60 * 1000);
+  if (esIndividual && horasHasta >= 24 && inscripcion.pago?.monto) {
+    try {
+      const { sendReintegroInscripcionEmail } = await import("@/lib/mail");
+      await sendReintegroInscripcionEmail(
+        usuario.email,
+        usuario.nombre,
+        inscripcion.clase.titulo,
+        inscripcion.clase.fechaHora,
+        inscripcion.pago.monto
+      );
+    } catch (error) {
+      console.error("No se pudo enviar mail de reintegro:", error);
+    }
+  }
 
   revalidatePath("/plataforma/mis-clases");
   revalidatePath("/plataforma/cronograma");
