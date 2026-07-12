@@ -13,6 +13,7 @@ export type RegistroState = {
     password?: string[];
     fechaNac?: string[];
     aptoFisico?: string[];
+    declaracionAptoFisico?: string[];
   };
   valores?: {
     dni?: string;
@@ -46,6 +47,7 @@ export async function registrarCliente(
   const password = formData.get("password") as string;
   const fechaNacStr = formData.get("fechaNac") as string;
   const archivo = formData.get("aptoFisico") as File | null;
+  const declaracionAptoFisico = formData.get("declaracionAptoFisico");
 
   const errores: RegistroState["errores"] = {};
 
@@ -86,6 +88,10 @@ export async function registrarCliente(
     } else if (!extensionesPermitidas.includes(ext)) {
       errores.aptoFisico = ["La extensión del archivo no es válida. Solo se permiten .pdf, .jpg, .jpeg o .png."];
     }
+  }
+
+  if (!declaracionAptoFisico) {
+    errores.declaracionAptoFisico = ["Es necesario declarar la validez del apto-físico adjunto."];
   }
 
   const valores: RegistroState["valores"] = { dni, nombre, apellido, email, fechaNac: fechaNacStr };

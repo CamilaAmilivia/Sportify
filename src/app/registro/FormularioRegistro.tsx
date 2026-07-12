@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useEffect } from "react";
 import Link from "next/link";
 import { registrarCliente, RegistroState } from "./actions";
 
@@ -13,6 +13,12 @@ export default function FormularioRegistro() {
   );
   const [nombreArchivo, setNombreArchivo] = useState<string | null>(null);
   const [mostrarPassword, setMostrarPassword] = useState(false);
+
+  useEffect(() => {
+    if (state.errores) {
+      setNombreArchivo(null);
+    }
+  }, [state]);
 
   if (state.exito) {
     return (
@@ -292,6 +298,24 @@ export default function FormularioRegistro() {
         {state.errores?.aptoFisico && (
           <span className="form-error">⚠ {state.errores.aptoFisico[0]}</span>
         )}
+      </div>
+
+      {/* Declaración Apto Físico */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginTop: 4 }}>
+        <input
+          type="checkbox"
+          id="declaracionAptoFisico"
+          name="declaracionAptoFisico"
+          style={{ width: "18px", height: "18px", marginTop: "2px", cursor: "pointer" }}
+        />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+          <label htmlFor="declaracionAptoFisico" style={{ fontSize: "0.95rem", color: "var(--color-dark)", cursor: "pointer", lineHeight: 1.4, margin: 0 }}>
+            Declaro haber adjuntado un certificado de aptitud física de mi persona válido al día de la fecha.
+          </label>
+          {state.errores?.declaracionAptoFisico && (
+            <span className="form-error">⚠ {state.errores.declaracionAptoFisico[0]}</span>
+          )}
+        </div>
       </div>
 
       {/* Submit */}
