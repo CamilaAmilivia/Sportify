@@ -199,6 +199,7 @@ export function GestionClases({
       }
 
       setClaseASuspender(null);
+      setToast({ tipo: "success", mensaje: "La clase fue suspendida y se notificó a los inscriptos." });
       router.refresh();
       await fetchClases();
     } catch (error) {
@@ -489,6 +490,19 @@ export function GestionClases({
                     <td style={{ padding: "16px 20px", color: "var(--color-dark)" }}>
                       <div style={{ fontWeight: "700", fontSize: "1.05rem", marginBottom: "4px" }}>
                         {clase.disciplina.nombre}
+                        {clase.estado === "SUSPENDIDA" && (
+                          <span style={{
+                            marginLeft: "8px",
+                            background: "#fff7ed",
+                            color: "#c2410c",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            fontSize: "0.75rem",
+                            fontWeight: 700
+                          }}>
+                            Suspendida
+                          </span>
+                        )}
                         {clase.estado === "CANCELADA" && (
                           <span style={{
                             marginLeft: "8px",
@@ -499,7 +513,7 @@ export function GestionClases({
                             fontSize: "0.75rem",
                             fontWeight: 700
                           }}>
-                            Suspendida
+                            Cancelada
                           </span>
                         )}
                       </div>
@@ -545,20 +559,20 @@ export function GestionClases({
                       </button>
                       <button
                         type="button"
-                        disabled={clase.estado === "CANCELADA"}
+                        disabled={clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA"}
                         onClick={() => {
                           setClaseASuspender(clase);
                           setErrorSuspender(null);
                         }}
                         style={{
                           padding: "10px 14px",
-                          background: clase.estado === "CANCELADA" ? "#f1f5f9" : "#fff7ed",
-                          color: clase.estado === "CANCELADA" ? "#94a3b8" : "#c2410c",
-                          border: clase.estado === "CANCELADA" ? "1px solid #e2e8f0" : "1px solid #ffedd5",
+                          background: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "#f1f5f9" : "#fff7ed",
+                          color: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "#94a3b8" : "#c2410c",
+                          border: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "1px solid #e2e8f0" : "1px solid #ffedd5",
                           borderRadius: 8,
                           fontSize: "0.875rem",
                           fontWeight: 700,
-                          cursor: clase.estado === "CANCELADA" ? "not-allowed" : "pointer",
+                          cursor: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "not-allowed" : "pointer",
                           marginRight: "8px",
                         }}
                       >

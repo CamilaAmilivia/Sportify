@@ -81,13 +81,28 @@ export default async function PaginaMisClases({
       where: { usuarioId: usuario.id, tipo: "AVISO_AUSENCIA_ABONO", createdAt: { gte: treintaDiasAtras } },
     });
 
-    const cancelacionesIndividual = await prisma.penalizacion.count({
+    const ultimoRecargoIndividual = await prisma.penalizacion.findFirst({
+      where: { usuarioId: usuario.id, tipo: "RECARGO_CLASE_INDIVIDUAL" },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const avisosIndividualCicloActual = await prisma.penalizacion.count({
+      where: {
+        usuarioId: usuario.id,
+        tipo: "AVISO_CANCELACION_TARDIA_INDIVIDUAL",
+        createdAt: { gt: ultimoRecargoIndividual?.createdAt ?? new Date(0) },
+      },
+    });
+
+    const recargoIndividualPendiente = await prisma.penalizacion.count({
       where: {
         usuarioId: usuario.id,
         tipo: { in: ["RECARGO_CLASE_INDIVIDUAL", "RECARGO_AUSENCIA_INDIVIDUAL"] },
         aplicada: false,
       },
     });
+
+    const cancelacionesIndividual = recargoIndividualPendiente > 0 ? recargoIndividualPendiente : avisosIndividualCicloActual;
 
     const ultimoRecargoAbono = await prisma.penalizacion.findFirst({
       where: { usuarioId: usuario.id, tipo: "RECARGO_ABONO" },
@@ -233,7 +248,7 @@ export default async function PaginaMisClases({
         {/* Penalizaciones */}
         <p style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 12 }}>Penalizaciones</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 32 }}>
-          <StatCard icono="❌" color="#fff1f2" iconColor="#e11d48" titulo="Penalizaciones individuales" valor={cancelacionesIndividual} subtitulo={cancelacionesIndividual === 0 ? "Todo en orden" : "Cancelaciones tardías"} />
+          <StatCard icono="❌" color="#fff1f2" iconColor="#e11d48" titulo="Penalizaciones individuales" valor={cancelacionesIndividual} subtitulo={recargoIndividualPendiente > 0 ? "Recargo pendiente de pago" : cancelacionesIndividual === 0 ? "Todo en orden" : `${avisosIndividualCicloActual} de ${3} avisos`} />
           <StatCard icono="❌" color="#fff1f2" iconColor="#e11d48" titulo="Penalizaciones abono" valor={cancelacionesAbono} subtitulo={recargoAbonoPendiente > 0 ? "Recargo pendiente de pago" : cancelacionesAbono === 0 ? "Todo en orden" : `${avisosAbonoCicloActual} de ${3} avisos`} />
         </div>
 

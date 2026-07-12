@@ -42,11 +42,10 @@ async function obtenerContextoCancelacion(inscripcionId: number) {
 /**
  * Vista previa (sin aplicar nada) de la penalización que correspondería si
  * se confirma la cancelación de esta inscripción, según las reglas:
- * - Individual, cancela con +24hs de anticipación: sin penalización.
- * - Individual, cancela con -24hs: recargo del 30% en su próxima clase individual.
- * - Abono, cancela con +48hs: reintegro (sin penalización).
- * - Abono, cancela con -48hs: a la 3ra vez, recargo del 30% en su próximo
- *   abono y pierde la clase cancelada (sin reintegro).
+ * - Individual, cancela con +24hs: reintegro en persona, sin penalización.
+ * - Individual, cancela con -24hs: aviso. Al 3er aviso recargo del 30% en próxima clase individual.
+ * - Abono, cancela con +48hs: crédito devuelto, sin penalización.
+ * - Abono, cancela con -48hs: aviso. Al 3er aviso recargo del 30% en próximo abono.
  * Devuelve null si la cancelación no genera ninguna penalización.
  */
 export async function obtenerInfoCancelacion(
@@ -94,9 +93,27 @@ export async function obtenerInfoCancelacion(
     };
   }
 
+  const ultimoRecargoIndividual = await prisma.penalizacion.findFirst({
+    where: { usuarioId: inscripcion.usuarioId, tipo: "RECARGO_CLASE_INDIVIDUAL" },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const avisosIndividual = await prisma.penalizacion.count({
+    where: {
+      usuarioId: inscripcion.usuarioId,
+      tipo: "AVISO_CANCELACION_TARDIA_INDIVIDUAL",
+      createdAt: { gt: ultimoRecargoIndividual?.createdAt ?? new Date(0) },
+    },
+  });
+
+  const seraLaQueGeneraRecargoIndividual =
+    (avisosIndividual + 1) % CANCELACIONES_PARA_RECARGO_ABONO === 0;
+
   return {
     titulo: "Cancelación fuera de término",
-    descripcion: `Cancelás "${inscripcion.clase.titulo}" del ${fecha} con menos de ${HORAS_LIMITE_INDIVIDUAL}hs de anticipación: se aplicará un recargo del ${PORCENTAJE_RECARGO}% en tu próxima compra de clase individual.`,
+    descripcion: seraLaQueGeneraRecargoIndividual
+      ? `Cancelás "${inscripcion.clase.titulo}" del ${fecha} con menos de ${HORAS_LIMITE_INDIVIDUAL}hs de anticipación. Esta es tu ${avisosIndividual + 1}ª cancelación tardía: se aplicará un recargo del ${PORCENTAJE_RECARGO}% en tu próxima clase individual.`
+      : `Cancelás "${inscripcion.clase.titulo}" del ${fecha} con menos de ${HORAS_LIMITE_INDIVIDUAL}hs de anticipación. Llevás ${avisosIndividual + 1} de ${CANCELACIONES_PARA_RECARGO_ABONO} cancelaciones tardías: al llegar a ${CANCELACIONES_PARA_RECARGO_ABONO} se aplica un recargo del ${PORCENTAJE_RECARGO}% en tu próxima clase individual.`,
   };
 }
 
@@ -170,11 +187,36 @@ export async function aplicarPenalizacionPorCancelacion(inscripcionId: number) {
     data: {
       usuarioId: inscripcion.usuarioId,
       claseId: inscripcion.claseId,
-      tipo: "RECARGO_CLASE_INDIVIDUAL",
-      porcentaje: PORCENTAJE_RECARGO,
-      motivo: `Recargo del ${PORCENTAJE_RECARGO}% por cancelar "${inscripcion.clase.titulo}" del ${fecha} con menos de ${HORAS_LIMITE_INDIVIDUAL}hs de anticipación.`,
+      tipo: "AVISO_CANCELACION_TARDIA_INDIVIDUAL",
+      porcentaje: 0,
+      motivo: `Cancelación tardía (menos de ${HORAS_LIMITE_INDIVIDUAL}hs) de "${inscripcion.clase.titulo}" del ${fecha}.`,
     },
   });
+
+  const ultimoRecargoIndividual = await prisma.penalizacion.findFirst({
+    where: { usuarioId: inscripcion.usuarioId, tipo: "RECARGO_CLASE_INDIVIDUAL" },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const avisosIndividual = await prisma.penalizacion.count({
+    where: {
+      usuarioId: inscripcion.usuarioId,
+      tipo: "AVISO_CANCELACION_TARDIA_INDIVIDUAL",
+      createdAt: { gt: ultimoRecargoIndividual?.createdAt ?? new Date(0) },
+    },
+  });
+
+  if (avisosIndividual % CANCELACIONES_PARA_RECARGO_ABONO === 0) {
+    await prisma.penalizacion.create({
+      data: {
+        usuarioId: inscripcion.usuarioId,
+        claseId: inscripcion.claseId,
+        tipo: "RECARGO_CLASE_INDIVIDUAL",
+        porcentaje: PORCENTAJE_RECARGO,
+        motivo: `Recargo del ${PORCENTAJE_RECARGO}% por acumular ${CANCELACIONES_PARA_RECARGO_ABONO} cancelaciones tardías de clase individual (la última, de "${inscripcion.clase.titulo}" del ${fecha}).`,
+      },
+    });
+  }
 }
 
 /**
@@ -189,6 +231,7 @@ export async function obtenerRecargoVigente(
     tipoCompra === "MENSUALIDAD"
       ? ["RECARGO_ABONO"]
       : ["RECARGO_CLASE_INDIVIDUAL", "RECARGO_AUSENCIA_INDIVIDUAL"];
+
 
   return prisma.penalizacion.findFirst({
     where: {
@@ -235,8 +278,17 @@ export async function aplicarPenalizacionPorAusencia(inscripcionId: number) {
       },
     });
 
+    const ultimoRecargoAusencia = await prisma.penalizacion.findFirst({
+      where: { usuarioId: inscripcion.usuarioId, tipo: "RECARGO_ABONO" },
+      orderBy: { createdAt: "desc" },
+    });
+
     const avisosAusencia = await prisma.penalizacion.count({
-      where: { usuarioId: inscripcion.usuarioId, tipo: "AVISO_AUSENCIA_ABONO" },
+      where: {
+        usuarioId: inscripcion.usuarioId,
+        tipo: "AVISO_AUSENCIA_ABONO",
+        createdAt: { gt: ultimoRecargoAusencia?.createdAt ?? new Date(0) },
+      },
     });
 
     if (avisosAusencia % CANCELACIONES_PARA_RECARGO_ABONO === 0) {
