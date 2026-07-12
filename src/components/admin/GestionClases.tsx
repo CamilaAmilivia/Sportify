@@ -15,7 +15,7 @@ type Clase = {
   duracionMin: number;
   estado: string;
   disciplina: { nombre: string };
-  profesor: { nombre: string; apellido: string };
+  profesor: { id: number; nombre: string; apellido: string };
   serieId?: string | number | null;
   cupoMaximo?: number;
   precio?: number;
@@ -31,7 +31,7 @@ type GestionClasesProps = {
   }>;
 };
 
-type VistaFiltro = "SEMANA_ACTUAL" | "SEMANA_PROXIMA" | "RANGO_FECHAS";
+type VistaFiltro = "SEMANA_ACTUAL" | "SEMANA_PROXIMA" | "RANGO_FECHAS" | "DIA_ESPECIFICO";
 
 export function GestionClases({
   disciplinas,
@@ -51,6 +51,10 @@ export function GestionClases({
 
   const [fechaFiltroEspecifica, setFechaFiltroEspecifica] = useState<string>("");
   const [verSoloDisponibles, setVerSoloDisponibles] = useState<boolean>(true);
+
+  const [filtroProfesorId, setFiltroProfesorId] = useState<number | "TODOS">("TODOS");
+  const [busquedaProfesor, setBusquedaProfesor] = useState("");
+  const [dropdownProfesorAbierto, setDropdownProfesorAbierto] = useState(false);
 
   const [claseASuspender, setClaseASuspender] = useState<Clase | null>(null);
   const [suspendiendo, setSuspendiendo] = useState(false);
@@ -90,7 +94,7 @@ export function GestionClases({
         fin = new Date(inicio);
         fin.setDate(inicio.getDate() + 6);
         fin.setHours(23, 59, 59, 999);
-      } else {
+      } else if (vistaFiltro === "RANGO_FECHAS") {
         // RANGO_FECHAS
         if (!fechaInicioPersonalizada || !fechaFinPersonalizada) {
           setCargando(false);
@@ -99,6 +103,14 @@ export function GestionClases({
         // Use local dates accurately
         inicio = new Date(fechaInicioPersonalizada + "T00:00:00");
         fin = new Date(fechaFinPersonalizada + "T23:59:59");
+      } else {
+        // DIA_ESPECIFICO
+        if (!fechaFiltroEspecifica) {
+          setCargando(false);
+          return;
+        }
+        inicio = new Date(fechaFiltroEspecifica + "T00:00:00");
+        fin = new Date(fechaFiltroEspecifica + "T23:59:59");
       }
       
       const resultados = await obtenerClasesFiltradas(inicio.toISOString(), fin.toISOString());
@@ -108,7 +120,7 @@ export function GestionClases({
     } finally {
       setCargando(false);
     }
-  }, [vistaFiltro, fechaInicioPersonalizada, fechaFinPersonalizada]);
+  }, [vistaFiltro, fechaInicioPersonalizada, fechaFinPersonalizada, fechaFiltroEspecifica]);
 
   useEffect(() => {
     void Promise.resolve().then(fetchClases);
@@ -198,23 +210,11 @@ export function GestionClases({
   };
 
   const clasesFiltradasYDisponibles = clases.filter((clase) => {
-    // Solo mostrar clases futuras
-    if (new Date(clase.fechaHora) < new Date()) {
-      return false;
-    }
     if (verSoloDisponibles && clase.estado !== "ACTIVA") {
       return false;
     }
-    if (fechaFiltroEspecifica) {
-      const fechaClase = new Date(clase.fechaHora);
-      const [y, m, d] = fechaFiltroEspecifica.split("-").map(Number);
-      if (
-        fechaClase.getFullYear() !== y ||
-        fechaClase.getMonth() !== (m - 1) ||
-        fechaClase.getDate() !== d
-      ) {
-        return false;
-      }
+    if (filtroProfesorId !== "TODOS" && clase.profesor.id !== filtroProfesorId) {
+      return false;
     }
     return true;
   });
@@ -272,13 +272,14 @@ export function GestionClases({
             >
               <option value="SEMANA_ACTUAL">Semana actual</option>
               <option value="SEMANA_PROXIMA">Semana próxima</option>
+              <option value="DIA_ESPECIFICO">Día específico</option>
               <option value="RANGO_FECHAS">Rango de fechas</option>
             </select>
           </div>
 
-          <div>
-            <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Día específico</label>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {vistaFiltro === "DIA_ESPECIFICO" && (
+            <div>
+              <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Seleccionar día</label>
               <input
                 type="date"
                 value={fechaFiltroEspecifica}
@@ -293,38 +294,8 @@ export function GestionClases({
                   fontWeight: 500
                 }}
               />
-              {fechaFiltroEspecifica && (
-                <button
-                  type="button"
-                  onClick={() => setFechaFiltroEspecifica("")}
-                  style={{
-                    padding: "10px 12px",
-                    background: "#f1f5f9",
-                    color: "#475569",
-                    border: "1px solid rgba(0,0,0,0.08)",
-                    borderRadius: "8px",
-                    fontSize: "0.875rem",
-                    cursor: "pointer",
-                    fontWeight: 600
-                  }}
-                >
-                  Limpiar
-                </button>
-              )}
             </div>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", height: "45px" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--color-dark)", fontSize: "0.95rem", fontWeight: 600, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={verSoloDisponibles}
-                onChange={(e) => setVerSoloDisponibles(e.target.checked)}
-                style={{ width: "18px", height: "18px", cursor: "pointer" }}
-              />
-              Ver solo clases disponibles
-            </label>
-          </div>
+          )}
 
           {vistaFiltro === "RANGO_FECHAS" && (
             <>
@@ -364,6 +335,134 @@ export function GestionClases({
               </div>
             </>
           )}
+
+          <div style={{ position: "relative" }}>
+            <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Profesor</label>
+            <div 
+              onClick={() => setDropdownProfesorAbierto(!dropdownProfesorAbierto)}
+              style={{
+                padding: "12px",
+                background: "#f8fafc",
+                color: "var(--color-dark)",
+                border: "1px solid rgba(0,0,0,0.1)",
+                borderRadius: "8px",
+                fontSize: "1rem",
+                cursor: "pointer",
+                fontWeight: 500,
+                minWidth: "250px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}
+            >
+              <span>
+                {filtroProfesorId === "TODOS" 
+                  ? "Todos los profesores" 
+                  : (() => {
+                      const p = profesores.find(p => p.id === filtroProfesorId);
+                      return p ? `${p.nombre} ${p.apellido} (DNI: ${p.dni})` : "Seleccionar profesor";
+                    })()}
+              </span>
+              <span style={{ marginLeft: "8px", fontSize: "0.8rem" }}>▼</span>
+            </div>
+            
+            {dropdownProfesorAbierto && (
+              <>
+                <div 
+                  onClick={() => setDropdownProfesorAbierto(false)} 
+                  style={{ position: "fixed", inset: 0, zIndex: 40 }}
+                />
+                <div 
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    minWidth: "100%",
+                    marginTop: "4px",
+                    background: "white",
+                    border: "1px solid rgba(0,0,0,0.1)",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    zIndex: 50,
+                    maxHeight: "300px",
+                    overflowY: "auto"
+                  }}
+                >
+                  <div style={{ padding: "8px", position: "sticky", top: 0, background: "white", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+                    <input 
+                      type="text" 
+                      placeholder="Buscar profesor..." 
+                      value={busquedaProfesor}
+                      onChange={(e) => setBusquedaProfesor(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        border: "1px solid rgba(0,0,0,0.1)",
+                        borderRadius: "6px",
+                        outline: "none",
+                        fontSize: "0.9rem",
+                        boxSizing: "border-box"
+                      }}
+                      autoFocus
+                    />
+                  </div>
+                  <div 
+                    onClick={() => {
+                      setFiltroProfesorId("TODOS");
+                      setDropdownProfesorAbierto(false);
+                      setBusquedaProfesor("");
+                    }}
+                    style={{
+                      padding: "10px 12px",
+                      cursor: "pointer",
+                      background: filtroProfesorId === "TODOS" ? "#f1f5f9" : "transparent",
+                      fontSize: "0.95rem"
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = filtroProfesorId === "TODOS" ? "#f1f5f9" : "transparent")}
+                  >
+                    Todos los profesores
+                  </div>
+                  {profesores
+                    .filter(p => `${p.nombre} ${p.apellido} ${p.dni}`.toLowerCase().includes(busquedaProfesor.toLowerCase()))
+                    .map(p => (
+                      <div 
+                        key={p.id}
+                        onClick={() => {
+                          setFiltroProfesorId(p.id);
+                          setDropdownProfesorAbierto(false);
+                          setBusquedaProfesor("");
+                        }}
+                        style={{
+                          padding: "10px 12px",
+                          cursor: "pointer",
+                          background: filtroProfesorId === p.id ? "#f1f5f9" : "transparent",
+                          fontSize: "0.95rem",
+                          whiteSpace: "nowrap"
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = filtroProfesorId === p.id ? "#f1f5f9" : "transparent")}
+                      >
+                        {p.nombre} {p.apellido} (DNI: {p.dni})
+                      </div>
+                    ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", height: "45px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--color-dark)", fontSize: "0.95rem", fontWeight: 600, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={verSoloDisponibles}
+                onChange={(e) => setVerSoloDisponibles(e.target.checked)}
+                style={{ width: "18px", height: "18px", cursor: "pointer" }}
+              />
+              Ocultar clases suspendidas
+            </label>
+          </div>
         </div>
       </div>
 

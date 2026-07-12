@@ -18,7 +18,7 @@ export async function obtenerClasesFiltradas(fechaInicioIso: string, fechaFinIso
     },
     include: {
       disciplina: { select: { nombre: true } },
-      profesor: { select: { nombre: true, apellido: true } },
+      profesor: { select: { id: true, nombre: true, apellido: true } },
     },
     orderBy: { fechaHora: "asc" },
   });
