@@ -131,7 +131,7 @@ export function FormularioCrearClase({
       horaInicio: formData.horaInicio,
       disciplinaId: Number(formData.disciplinaId),
       cupoMaximo: Number(formData.cupoMaximo),
-      precio: Number(formData.precio) || undefined,
+      precio: formData.precio !== "" && !isNaN(Number(formData.precio)) ? Number(formData.precio) : undefined,
     };
 
     const result = await crearClase(datosAEnviar);
@@ -425,7 +425,6 @@ export function FormularioCrearClase({
                 name="cupoMaximo"
                 value={formData.cupoMaximo}
                 onChange={handleChange}
-                min="1"
                 required
                 style={{ width: "100%", padding: "10px 12px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "1rem", boxSizing: "border-box" }}
               />
@@ -443,7 +442,6 @@ export function FormularioCrearClase({
                   name="precio"
                   value={formData.precio}
                   onChange={handleChange}
-                  min="1"
                   step="0.01"
                   required
                   style={{ width: "100%", padding: "10px 12px 10px 28px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, fontSize: "1rem", boxSizing: "border-box" }}
