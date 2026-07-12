@@ -342,7 +342,7 @@ const irHoy = () => {
   router.push(`/plataforma/cronograma`)
 }
 
-  const hoy = format(new Date(), 'EEEE', { locale: es })
+  const hoy = format(new Date(), 'yyyy-MM-dd')
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -433,7 +433,7 @@ const irHoy = () => {
       <main className="max-w-7xl mx-auto px-5 pt-10 pb-7">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-5">
           {diasConFecha.map(({ dia, fecha }) => {
-            const esHoy = format(fecha, 'EEEE', { locale: es }).toLowerCase() === hoy.toLowerCase()
+            const esHoy = format(fecha, 'yyyy-MM-dd') === hoy
             const items = actividadesPorDia(dia)
 
             // Si hay filtro de día activo y no es este día, ocultar
