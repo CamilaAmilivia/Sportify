@@ -32,7 +32,7 @@ export async function registrarProfesor(
   const dniStr = (formData.get("dni") as string)?.trim();
   const nombre = (formData.get("nombre") as string)?.trim();
   const apellido = (formData.get("apellido") as string)?.trim();
-  const email = (formData.get("email") as string)?.trim();
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
   const fechaNacStr = formData.get("fechaNac") as string;
 
   const valores = { dni: dniStr, nombre, apellido, email, fechaNac: fechaNacStr };

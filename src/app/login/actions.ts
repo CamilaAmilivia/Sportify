@@ -18,7 +18,7 @@ export async function iniciarSesion(
   _prevState: LoginState,
   formData: FormData
 ): Promise<LoginState> {
-  const email = (formData.get("email") as string)?.trim();
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
 
   const errores: LoginState["errores"] = {};
