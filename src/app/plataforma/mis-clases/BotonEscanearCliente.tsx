@@ -76,14 +76,14 @@ export function BotonEscanearCliente({
           onClick={manejarClick}
           disabled={cargando}
           style={{
-            background: "var(--color-dark)",
-            color: "white",
-            border: "none",
-            padding: "8px 16px",
+            background: "#f0f9ff",
+            color: "#0369a1",
+            border: "1px solid #bae6fd",
+            padding: "10px 14px",
             borderRadius: 8,
-            fontWeight: 600,
+            fontWeight: 700,
             cursor: cargando ? "wait" : "pointer",
-            fontSize: "0.9rem",
+            fontSize: "0.875rem",
             transition: "opacity 0.2s ease",
             display: "flex",
             alignItems: "center",

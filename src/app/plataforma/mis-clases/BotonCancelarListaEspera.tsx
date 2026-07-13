@@ -35,13 +35,13 @@ export function BotonCancelarListaEspera({
       <button
         onClick={() => setMostrarModal(true)}
         style={{
-          background: "transparent",
+          background: "#fef2f2",
           color: "#dc2626",
-          border: "1px solid #dc2626",
-          padding: "6px 12px",
+          border: "1px solid #fecaca",
+          padding: "10px 14px",
           borderRadius: 8,
-          fontWeight: 600,
-          fontSize: "0.85rem",
+          fontWeight: 700,
+          fontSize: "0.875rem",
           cursor: "pointer",
         }}
       >
