@@ -50,7 +50,6 @@ export function GestionClases({
   const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
 
   const [fechaFiltroEspecifica, setFechaFiltroEspecifica] = useState<string>("");
-  const [verSoloDisponibles, setVerSoloDisponibles] = useState<boolean>(true);
 
   const [filtroProfesorId, setFiltroProfesorId] = useState<number | "TODOS">("TODOS");
   const [busquedaProfesor, setBusquedaProfesor] = useState("");
@@ -211,9 +210,6 @@ export function GestionClases({
   };
 
   const clasesFiltradasYDisponibles = clases.filter((clase) => {
-    if (verSoloDisponibles && clase.estado !== "ACTIVA") {
-      return false;
-    }
     if (filtroProfesorId !== "TODOS" && clase.profesor.id !== filtroProfesorId) {
       return false;
     }
@@ -453,17 +449,6 @@ export function GestionClases({
             )}
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", height: "45px" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--color-dark)", fontSize: "0.95rem", fontWeight: 600, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={verSoloDisponibles}
-                onChange={(e) => setVerSoloDisponibles(e.target.checked)}
-                style={{ width: "18px", height: "18px", cursor: "pointer" }}
-              />
-              Ocultar clases suspendidas
-            </label>
-          </div>
         </div>
       </div>
 
