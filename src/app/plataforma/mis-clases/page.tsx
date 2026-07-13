@@ -130,7 +130,7 @@ export default async function PaginaMisClases({
       where: {
         usuarioId: usuario.id,
         estado: "ACTIVA",
-        clase: { fechaHora: { gte: hoyInicio, lte: finRango }, estado: "ACTIVA" },
+        clase: { fechaHora: { gte: hoyInicio, lte: finRango }, estado: { in: ["ACTIVA", "SUSPENDIDA"] } },
       },
       orderBy: { clase: { fechaHora: "asc" } },
       include: {
@@ -184,7 +184,7 @@ export default async function PaginaMisClases({
       where: {
         usuarioId: usuario.id,
         estado: "ACTIVA",
-        clase: { fechaHora: { gt: finRango }, estado: "ACTIVA" },
+        clase: { fechaHora: { gt: finRango }, estado: { in: ["ACTIVA", "SUSPENDIDA"] } },
       },
     }) > 0;
 
@@ -225,14 +225,6 @@ export default async function PaginaMisClases({
               <span style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", borderRadius: 20, padding: "4px 14px", fontSize: "0.85rem", fontWeight: 600 }}>
                 {proximaConfirmada.clase.disciplina.nombre}
               </span>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: "12px 20px" }}>
-                <p style={{ color: "#16a34a", fontWeight: 700, margin: "0 0 2px", display: "flex", alignItems: "center", gap: 6 }}>
-                  ✓ Confirmada
-                </p>
-                <p style={{ color: "#4b7a58", fontSize: "0.8rem", margin: 0 }}>Tu lugar está asegurado</p>
-              </div>
             </div>
           </div>
         )}
@@ -311,13 +303,17 @@ export default async function PaginaMisClases({
                           )}
                         </div>
                       </div>
-                      {estaPresente ? (
+                      {insc.clase.estado === "SUSPENDIDA" ? (
+                        <span style={{ marginLeft: "auto", background: "#fef2f2", color: "#dc2626", borderRadius: 20, padding: "3px 12px", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}>
+                          Suspendida
+                        </span>
+                      ) : estaPresente ? (
                         <span style={{ marginLeft: "auto", background: "#f0fdf4", color: "#16a34a", borderRadius: 20, padding: "3px 12px", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}>
                           ✓ Presente
                         </span>
-                      ) : !estaEnVentana ? (
-                        <span style={{ marginLeft: "auto", background: "#f0fdf4", color: "#16a34a", borderRadius: 20, padding: "3px 12px", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}>
-                          ✓ Confirmada
+                      ) : (ahora > finVentana || insc.clase.asistencias.length > 0) ? (
+                        <span style={{ marginLeft: "auto", background: "#fef2f2", color: "#dc2626", borderRadius: 20, padding: "3px 12px", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}>
+                          Ausente
                         </span>
                       ) : null}
                     </Link>
