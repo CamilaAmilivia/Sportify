@@ -332,20 +332,6 @@ export default async function PaginaMisClases({
                   </div>
                 );
               })}
-              {(hayMasClases || rangoDias > 7) && (
-                <div style={{ padding: "12px 20px", borderTop: proximasClases.length > 0 ? "1px solid #f3f4f6" : "none", display: "flex", gap: 16 }}>
-                  {hayMasClases && (
-                    <Link href={`/plataforma/mis-clases?dias=${rangoDias + 7}`} style={{ color: "#16a34a", fontWeight: 600, fontSize: "0.85rem", textDecoration: "none" }}>
-                      Ver más →
-                    </Link>
-                  )}
-                  {rangoDias > 7 && (
-                    <Link href={`/plataforma/mis-clases?dias=${rangoDias - 7}`} style={{ color: "#9ca3af", fontWeight: 600, fontSize: "0.85rem", textDecoration: "none" }}>
-                      Ver menos
-                    </Link>
-                  )}
-                </div>
-              )}
             </div>
           </div>
 
@@ -395,20 +381,6 @@ export default async function PaginaMisClases({
                     </div>
                   );
                 })}
-              {(hayMasEspera || rangoEspera > 7) && (
-                <div style={{ padding: "12px 20px", borderTop: pendientesActualizados.length > 0 ? "1px solid #f3f4f6" : "none", display: "flex", gap: 16 }}>
-                  {hayMasEspera && (
-                    <Link href={`/plataforma/mis-clases?dias=${rangoDias}&diasEspera=${rangoEspera + 7}`} style={{ color: "#16a34a", fontWeight: 600, fontSize: "0.85rem", textDecoration: "none" }}>
-                      Ver más →
-                    </Link>
-                  )}
-                  {rangoEspera > 7 && (
-                    <Link href={`/plataforma/mis-clases?dias=${rangoDias}&diasEspera=${rangoEspera - 7}`} style={{ color: "#9ca3af", fontWeight: 600, fontSize: "0.85rem", textDecoration: "none" }}>
-                      Ver menos
-                    </Link>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>
