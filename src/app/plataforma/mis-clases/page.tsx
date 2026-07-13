@@ -304,16 +304,16 @@ export default async function PaginaMisClases({
                         </div>
                       </div>
                       {insc.clase.estado === "SUSPENDIDA" ? (
-                        <span style={{ marginLeft: "auto", background: "#fef2f2", color: "#dc2626", borderRadius: 20, padding: "3px 12px", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}>
-                          Suspendida
+                        <span style={{ marginLeft: "auto", color: "#dc2626", fontSize: "0.85rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+                          ✗ Suspendida
                         </span>
                       ) : estaPresente ? (
-                        <span style={{ marginLeft: "auto", background: "#f0fdf4", color: "#16a34a", borderRadius: 20, padding: "3px 12px", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}>
+                        <span style={{ marginLeft: "auto", color: "#16a34a", fontSize: "0.85rem", fontWeight: 700, whiteSpace: "nowrap" }}>
                           ✓ Presente
                         </span>
                       ) : (ahora > finVentana || insc.clase.asistencias.length > 0) ? (
-                        <span style={{ marginLeft: "auto", background: "#fef2f2", color: "#dc2626", borderRadius: 20, padding: "3px 12px", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}>
-                          Ausente
+                        <span style={{ marginLeft: "auto", color: "#dc2626", fontSize: "0.85rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+                          ✗ Ausente
                         </span>
                       ) : null}
                     </Link>
