@@ -221,18 +221,18 @@ export function FormularioEditarClase({
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            
+
             {/* CAMPOS NO EDITABLES (LECTURA) */}
             <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "12px", border: "1px solid rgba(0,0,0,0.06)", display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "0.85rem", color: "var(--color-gray)", fontWeight: 600 }}>Disciplina</span>
-                <span style={{ 
-                  background: "#eff6ff", 
-                  color: "#1d4ed8", 
-                  padding: "4px 10px", 
-                  borderRadius: "6px", 
-                  fontSize: "0.875rem", 
-                  fontWeight: 700 
+                <span style={{
+                  background: "#eff6ff",
+                  color: "#1d4ed8",
+                  padding: "4px 10px",
+                  borderRadius: "6px",
+                  fontSize: "0.875rem",
+                  fontWeight: 700
                 }}>
                   {clase.disciplina.nombre}
                 </span>
@@ -300,7 +300,7 @@ export function FormularioEditarClase({
               <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "var(--color-dark)" }}>
                 Cupo máximo *
               </label>
-              
+
               {opcionesCupo.length === 0 ? (
                 <div style={{ color: "#dc2626", fontSize: "0.875rem", padding: "8px 0" }}>
                   ⚠ No hay opciones de cupo disponibles debido a superposiciones horarias.
@@ -330,8 +330,8 @@ export function FormularioEditarClase({
             </div>
 
             {clase.serieId && (
-              <div style={{ padding: "14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, marginTop: 8 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontWeight: 700, color: "#166534", fontSize: "0.95rem" }}>
+              <div style={{ padding: "14px", background: "#fff7ed", border: "1px solid #fdba74", borderRadius: 12, marginTop: 8 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontWeight: 700, color: "#c2410c", fontSize: "0.95rem" }}>
                   <input
                     type="checkbox"
                     checked={aplicarAFuturas}
@@ -340,8 +340,8 @@ export function FormularioEditarClase({
                   />
                   Aplicar cambios a clases futuras
                 </label>
-                <p style={{ margin: "4px 0 0 28px", fontSize: "0.825rem", color: "#15803d", lineHeight: 1.4 }}>
-                  Si se marca, se actualizarán todas las clases recurrentes de esta serie de aquí en adelante.
+                <p style={{ margin: "4px 0 0 28px", fontSize: "0.825rem", color: "#c2410c", lineHeight: 1.4 }}>
+                  ⚠️ Si se marca, se actualizarán todas las clases recurrentes de esta serie desde ésta en adelante.
                 </p>
               </div>
             )}
