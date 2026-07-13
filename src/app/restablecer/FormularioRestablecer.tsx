@@ -217,9 +217,7 @@ export default function FormularioRestablecer() {
           </button>
         </div>
         {state.errores?.password && (
-          <span style={{ color: "var(--color-red)", fontSize: "0.85rem" }}>
-            {state.errores.password[0]}
-          </span>
+          <span className="form-error">⚠ {state.errores.password[0]}</span>
         )}
       </div>
 
@@ -291,9 +289,7 @@ export default function FormularioRestablecer() {
           </button>
         </div>
         {state.errores?.confirmPassword && (
-          <span style={{ color: "var(--color-red)", fontSize: "0.85rem" }}>
-            {state.errores.confirmPassword[0]}
-          </span>
+          <span className="form-error">⚠ {state.errores.confirmPassword[0]}</span>
         )}
       </div>
 
