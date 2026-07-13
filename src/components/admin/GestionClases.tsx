@@ -238,6 +238,29 @@ export function GestionClases({
     return true;
   });
 
+  const sharedInputStyle = {
+    height: "44px",
+    padding: "0 12px",
+    background: "#f8fafc",
+    color: "var(--color-dark)",
+    border: "1px solid rgba(0,0,0,0.1)",
+    borderRadius: "8px",
+    fontSize: "0.95rem",
+    outline: "none",
+    fontWeight: 500,
+    boxSizing: "border-box" as const,
+  };
+
+  const sharedSelectStyle = {
+    ...sharedInputStyle,
+    padding: "0 36px 0 12px",
+    appearance: "none" as const,
+    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 12px center",
+    backgroundSize: "16px",
+  };
+
   return (
     <>
       <TituloPagina
@@ -278,16 +301,7 @@ export function GestionClases({
             <select
               value={vistaFiltro}
               onChange={(e) => setVistaFiltro(e.target.value as VistaFiltro)}
-              style={{
-                padding: "12px",
-                background: "#f8fafc",
-                color: "var(--color-dark)",
-                border: "1px solid rgba(0,0,0,0.1)",
-                borderRadius: "8px",
-                fontSize: "1rem",
-                outline: "none",
-                fontWeight: 500
-              }}
+              style={sharedSelectStyle}
             >
               <option value="SEMANA_ACTUAL">Semana actual</option>
               <option value="SEMANA_PROXIMA">Semana próxima</option>
@@ -303,15 +317,7 @@ export function GestionClases({
                 type="date"
                 value={fechaFiltroEspecifica}
                 onChange={(e) => setFechaFiltroEspecifica(e.target.value)}
-                style={{
-                  padding: "11px",
-                  background: "#f8fafc",
-                  color: "var(--color-dark)",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                  borderRadius: "8px",
-                  outline: "none",
-                  fontWeight: 500
-                }}
+                style={sharedInputStyle}
               />
             </div>
           )}
@@ -324,15 +330,7 @@ export function GestionClases({
                   type="date"
                   value={fechaInicioPersonalizada}
                   onChange={(e) => setFechaInicioPersonalizada(e.target.value)}
-                  style={{
-                    padding: "11px",
-                    background: "#f8fafc",
-                    color: "var(--color-dark)",
-                    border: "1px solid rgba(0,0,0,0.1)",
-                    borderRadius: "8px",
-                    outline: "none",
-                    fontWeight: 500
-                  }}
+                  style={sharedInputStyle}
                 />
               </div>
               <div>
@@ -341,15 +339,7 @@ export function GestionClases({
                   type="date"
                   value={fechaFinPersonalizada}
                   onChange={(e) => setFechaFinPersonalizada(e.target.value)}
-                  style={{
-                    padding: "11px",
-                    background: "#f8fafc",
-                    color: "var(--color-dark)",
-                    border: "1px solid rgba(0,0,0,0.1)",
-                    borderRadius: "8px",
-                    outline: "none",
-                    fontWeight: 500
-                  }}
+                  style={sharedInputStyle}
                 />
               </div>
             </>
@@ -360,17 +350,7 @@ export function GestionClases({
             <select
               value={filtroDisciplinaNombre}
               onChange={(e) => setFiltroDisciplinaNombre(e.target.value)}
-              style={{
-                padding: "12px",
-                background: "#f8fafc",
-                color: "var(--color-dark)",
-                border: "1px solid rgba(0,0,0,0.1)",
-                borderRadius: "8px",
-                fontSize: "1rem",
-                outline: "none",
-                fontWeight: 500,
-                minWidth: "180px"
-              }}
+              style={{ ...sharedSelectStyle, minWidth: "180px" }}
             >
               <option value="TODAS">Todas las disciplinas</option>
               {disciplinas.map(d => (
@@ -384,21 +364,15 @@ export function GestionClases({
             <div 
               onClick={() => setDropdownProfesorAbierto(!dropdownProfesorAbierto)}
               style={{
-                padding: "12px",
-                background: "#f8fafc",
-                color: "var(--color-dark)",
-                border: "1px solid rgba(0,0,0,0.1)",
-                borderRadius: "8px",
-                fontSize: "1rem",
+                ...sharedInputStyle,
                 cursor: "pointer",
-                fontWeight: 500,
                 minWidth: "250px",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center"
               }}
             >
-              <span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {filtroProfesorId === "TODOS" 
                   ? "Todos los profesores" 
                   : (() => {
@@ -406,7 +380,7 @@ export function GestionClases({
                       return p ? `${p.nombre} ${p.apellido} (DNI: ${p.dni})` : "Seleccionar profesor";
                     })()}
               </span>
-              <span style={{ marginLeft: "8px", fontSize: "0.8rem" }}>▼</span>
+              <svg style={{ flexShrink: 0, marginLeft: "8px" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </div>
             
             {dropdownProfesorAbierto && (
@@ -500,17 +474,7 @@ export function GestionClases({
             <select
               value={filtroEstado}
               onChange={(e) => setFiltroEstado(e.target.value)}
-              style={{
-                padding: "12px",
-                background: "#f8fafc",
-                color: "var(--color-dark)",
-                border: "1px solid rgba(0,0,0,0.1)",
-                borderRadius: "8px",
-                fontSize: "1rem",
-                outline: "none",
-                fontWeight: 500,
-                minWidth: "150px"
-              }}
+              style={{ ...sharedSelectStyle, minWidth: "150px" }}
             >
               <option value="TODOS">Todos los estados</option>
               <option value="En horario">En horario</option>
