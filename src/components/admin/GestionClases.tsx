@@ -51,6 +51,9 @@ export function GestionClases({
 
   const [fechaFiltroEspecifica, setFechaFiltroEspecifica] = useState<string>("");
 
+  const [filtroDisciplinaNombre, setFiltroDisciplinaNombre] = useState<string | "TODAS">("TODAS");
+  const [filtroEstado, setFiltroEstado] = useState<string>("TODOS");
+
   const [filtroProfesorId, setFiltroProfesorId] = useState<number | "TODOS">("TODOS");
   const [busquedaProfesor, setBusquedaProfesor] = useState("");
   const [dropdownProfesorAbierto, setDropdownProfesorAbierto] = useState(false);
@@ -226,6 +229,12 @@ export function GestionClases({
     if (filtroProfesorId !== "TODOS" && clase.profesor.id !== filtroProfesorId) {
       return false;
     }
+    if (filtroDisciplinaNombre !== "TODAS" && clase.disciplina.nombre !== filtroDisciplinaNombre) {
+      return false;
+    }
+    if (filtroEstado !== "TODOS" && obtenerEstadoClase(clase).texto !== filtroEstado) {
+      return false;
+    }
     return true;
   });
 
@@ -346,6 +355,30 @@ export function GestionClases({
             </>
           )}
 
+          <div>
+            <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Disciplina</label>
+            <select
+              value={filtroDisciplinaNombre}
+              onChange={(e) => setFiltroDisciplinaNombre(e.target.value)}
+              style={{
+                padding: "12px",
+                background: "#f8fafc",
+                color: "var(--color-dark)",
+                border: "1px solid rgba(0,0,0,0.1)",
+                borderRadius: "8px",
+                fontSize: "1rem",
+                outline: "none",
+                fontWeight: 500,
+                minWidth: "180px"
+              }}
+            >
+              <option value="TODAS">Todas las disciplinas</option>
+              {disciplinas.map(d => (
+                <option key={d.id} value={d.nombre}>{d.nombre}</option>
+              ))}
+            </select>
+          </div>
+
           <div style={{ position: "relative" }}>
             <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Profesor</label>
             <div 
@@ -460,6 +493,30 @@ export function GestionClases({
                 </div>
               </>
             )}
+          </div>
+
+          <div>
+            <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Estado</label>
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              style={{
+                padding: "12px",
+                background: "#f8fafc",
+                color: "var(--color-dark)",
+                border: "1px solid rgba(0,0,0,0.1)",
+                borderRadius: "8px",
+                fontSize: "1rem",
+                outline: "none",
+                fontWeight: 500,
+                minWidth: "150px"
+              }}
+            >
+              <option value="TODOS">Todos los estados</option>
+              <option value="En horario">En horario</option>
+              <option value="Cerrada">Cerrada</option>
+              <option value="Suspendida">Suspendida</option>
+            </select>
           </div>
 
         </div>
