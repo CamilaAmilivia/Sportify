@@ -131,7 +131,7 @@ export function FormularioCrearClase({
       horaInicio: formData.horaInicio,
       disciplinaId: Number(formData.disciplinaId),
       cupoMaximo: Number(formData.cupoMaximo),
-      precio: formData.precio !== "" && !isNaN(Number(formData.precio)) ? Number(formData.precio) : undefined,
+      precio: String(formData.precio) !== "" && !isNaN(Number(formData.precio)) ? Number(formData.precio) : undefined,
     };
 
     const result = await crearClase(datosAEnviar);

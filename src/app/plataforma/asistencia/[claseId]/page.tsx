@@ -45,6 +45,8 @@ export default async function ClaseAsistenciaPage({
     );
   }
 
+  const claseTerminada = new Date() >= new Date(clase.fechaHora.getTime() + clase.duracionMin * 60000);
+
   return (
     <>
       <TituloPagina
@@ -65,7 +67,7 @@ export default async function ClaseAsistenciaPage({
         ← Volver a mis clases
       </Link>
 
-      <GeneradorQR claseId={clase.id} />
+      <GeneradorQR claseId={clase.id} claseTerminada={claseTerminada} />
     </>
   );
 }

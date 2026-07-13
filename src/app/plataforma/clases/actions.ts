@@ -27,7 +27,17 @@ export async function obtenerClasesFiltradas(fechaInicioIso: string, fechaFinIso
 }
 
 export async function obtenerInscriptosClase(claseId: number) {
-  await requerirRol(["ADMIN"]);
+  const usuario = await requerirRol(["ADMIN", "PROFESOR"]);
+
+  if (usuario.rol === "PROFESOR") {
+    const clase = await prisma.clase.findUnique({
+      where: { id: claseId },
+      select: { profesorId: true }
+    });
+    if (!clase || clase.profesorId !== usuario.id) {
+      throw new Error("No tenés permiso para ver los inscriptos de esta clase.");
+    }
+  }
   
   const inscripciones = await prisma.inscripcion.findMany({
     where: { claseId, estado: "ACTIVA" },
