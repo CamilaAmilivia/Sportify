@@ -26,6 +26,31 @@ export async function obtenerClasesFiltradas(fechaInicioIso: string, fechaFinIso
   return clases;
 }
 
+export async function obtenerInscriptosClase(claseId: number) {
+  await requerirRol(["ADMIN"]);
+  
+  const inscripciones = await prisma.inscripcion.findMany({
+    where: { claseId, estado: "ACTIVA" },
+    include: {
+      usuario: { select: { id: true, nombre: true, apellido: true, dni: true } }
+    }
+  });
+
+  const asistencias = await prisma.asistencia.findMany({
+    where: { claseId }
+  });
+
+  return inscripciones.map(ins => {
+    const asistencia = asistencias.find(a => a.usuarioId === ins.usuario.id);
+    return {
+      id: ins.id,
+      nombre: `${ins.usuario.nombre} ${ins.usuario.apellido}`,
+      dni: ins.usuario.dni,
+      presente: asistencia ? asistencia.presente : null
+    };
+  });
+}
+
 
 
 export async function eliminarClasesSimilares(claseId: number) {

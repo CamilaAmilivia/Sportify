@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { TituloPagina } from "@/components/ui/TituloPagina";
 import { FormularioCrearClase } from "@/components/ui/FormularioCrearClase";
 import { FormularioEditarClase } from "@/components/ui/FormularioEditarClase";
+import { ModalInscriptosClase } from "@/components/ui/ModalInscriptosClase";
 import { eliminarClasesSimilares, obtenerClasesFiltradas, suspenderClase } from "@/app/plataforma/clases/actions";
 import { Toast } from "@/components/ui/Toast";
 
@@ -66,6 +67,8 @@ export function GestionClases({
 
   const [claseAEditar, setClaseAEditar] = useState<Clase | null>(null);
   const [errorEnDialogo, setErrorEnDialogo] = useState<string | null>(null);
+  
+  const [claseInscriptos, setClaseInscriptos] = useState<Clase | null>(null);
   
   const [toast, setToast] = useState<{ tipo: "success" | "error"; mensaje: string } | null>(null);
 
@@ -613,6 +616,27 @@ export function GestionClases({
                             <button
                               type="button"
                               onClick={() => {
+                                setClaseInscriptos(clase);
+                                setDropdownAccionesAbierto(null);
+                              }}
+                              style={{
+                                padding: "10px 14px",
+                                background: "#f8fafc",
+                                color: "#334155",
+                                border: "1px solid #e2e8f0",
+                                borderRadius: 8,
+                                fontSize: "0.875rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                textAlign: "left",
+                                width: "100%"
+                              }}
+                            >
+                              👤 Inscriptos
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
                                 setClaseAEditar(clase);
                                 setDropdownAccionesAbierto(null);
                               }}
@@ -927,6 +951,18 @@ export function GestionClases({
           mensaje={toast.mensaje}
           duracion={8000}
           onClose={() => setToast(null)}
+        />
+      )}
+
+      {claseInscriptos && (
+        <ModalInscriptosClase
+          claseId={claseInscriptos.id}
+          claseTitulo={claseInscriptos.titulo}
+          claseTerminada={(() => {
+            const fin = new Date(new Date(claseInscriptos.fechaHora).getTime() + claseInscriptos.duracionMin * 60000);
+            return new Date() >= fin;
+          })()}
+          onClose={() => setClaseInscriptos(null)}
         />
       )}
     </>
