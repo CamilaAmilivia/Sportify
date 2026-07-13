@@ -143,6 +143,18 @@ export function GestionClases({
     return `${inicio.toLocaleTimeString("es-AR", options)} a ${fin.toLocaleTimeString("es-AR", options)} h`;
   };
 
+  const obtenerEstadoClase = (clase: Clase) => {
+    if (clase.estado === "SUSPENDIDA" || clase.estado === "CANCELADA") {
+      return { texto: "Suspendida", bg: "#fee2e2", color: "#dc2626", border: "#fecaca" };
+    }
+    const fin = new Date(new Date(clase.fechaHora).getTime() + clase.duracionMin * 60000);
+    const ahora = new Date();
+    if (ahora >= fin) {
+      return { texto: "Cerrada", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" };
+    }
+    return { texto: "En horario", bg: "#dcfce7", color: "#15803d", border: "#bbf7d0" };
+  };
+
   const confirmarEliminacion = async () => {
     if (!claseAEliminar) return;
 
@@ -466,6 +478,7 @@ export function GestionClases({
                   <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Profesor</th>
                   <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Fecha</th>
                   <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Horario</th>
+                  <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Estado</th>
                   <th style={{ padding: "16px 20px", textAlign: "right", color: "var(--color-dark)", fontWeight: "700" }}>Acciones</th>
                 </tr>
               </thead>
@@ -520,6 +533,20 @@ export function GestionClases({
                         fontWeight: 600
                       }}>
                         {formatearHorario(clase.fechaHora, clase.duracionMin)}
+                      </span>
+                    </td>
+                    <td style={{ padding: "16px 20px", color: "var(--color-dark)" }}>
+                      <span style={{ 
+                        background: obtenerEstadoClase(clase).bg, 
+                        color: obtenerEstadoClase(clase).color,
+                        padding: "6px 10px", 
+                        borderRadius: "6px",
+                        border: `1px solid ${obtenerEstadoClase(clase).border}`,
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        whiteSpace: "nowrap"
+                      }}>
+                        {obtenerEstadoClase(clase).texto}
                       </span>
                     </td>
                     <td style={{ padding: "16px 20px", textAlign: "right", whiteSpace: "nowrap" }}>
