@@ -54,6 +54,7 @@ export function GestionClases({
   const [filtroProfesorId, setFiltroProfesorId] = useState<number | "TODOS">("TODOS");
   const [busquedaProfesor, setBusquedaProfesor] = useState("");
   const [dropdownProfesorAbierto, setDropdownProfesorAbierto] = useState(false);
+  const [dropdownAccionesAbierto, setDropdownAccionesAbierto] = useState<number | null>(null);
 
   const [claseASuspender, setClaseASuspender] = useState<Clase | null>(null);
   const [suspendiendo, setSuspendiendo] = useState(false);
@@ -474,48 +475,27 @@ export function GestionClases({
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "600px" }}>
               <thead style={{ background: "#f8fafc", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
                 <tr>
+                  <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Nombre</th>
                   <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Disciplina</th>
                   <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Profesor</th>
                   <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Fecha</th>
                   <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Horario</th>
                   <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Estado</th>
-                  <th style={{ padding: "16px 20px", textAlign: "right", color: "var(--color-dark)", fontWeight: "700" }}>Acciones</th>
+                  <th style={{ padding: "16px 20px", textAlign: "right", color: "var(--color-dark)", fontWeight: "700" }}></th>
                 </tr>
               </thead>
               <tbody>
                 {clasesFiltradasYDisponibles.map((clase, index) => (
                   <tr key={clase.id} style={{ borderBottom: index === clasesFiltradasYDisponibles.length - 1 ? "none" : "1px solid rgba(0,0,0,0.06)" }}>
                     <td style={{ padding: "16px 20px", color: "var(--color-dark)" }}>
-                      <div style={{ fontWeight: "700", fontSize: "1.05rem", marginBottom: "4px" }}>
-                        {clase.disciplina.nombre}
-                        {clase.estado === "SUSPENDIDA" && (
-                          <span style={{
-                            marginLeft: "8px",
-                            background: "#fff7ed",
-                            color: "#c2410c",
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                            fontSize: "0.75rem",
-                            fontWeight: 700
-                          }}>
-                            Suspendida
-                          </span>
-                        )}
-                        {clase.estado === "CANCELADA" && (
-                          <span style={{
-                            marginLeft: "8px",
-                            background: "#fee2e2",
-                            color: "#dc2626",
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                            fontSize: "0.75rem",
-                            fontWeight: 700
-                          }}>
-                            Cancelada
-                          </span>
-                        )}
+                      <div style={{ fontWeight: 500, fontSize: "1.05rem" }}>
+                        {clase.titulo}
                       </div>
-                      <div style={{ fontSize: "0.875rem", color: "var(--color-gray)", fontWeight: 500 }}>{clase.titulo}</div>
+                    </td>
+                    <td style={{ padding: "16px 20px", color: "var(--color-dark)" }}>
+                      <div style={{ fontWeight: 500, fontSize: "0.95rem" }}>
+                        {clase.disciplina.nombre}
+                      </div>
                     </td>
                     <td style={{ padding: "16px 20px", color: "var(--color-dark)", fontWeight: 500 }}>
                       {clase.profesor.nombre} {clase.profesor.apellido}
@@ -549,67 +529,118 @@ export function GestionClases({
                         {obtenerEstadoClase(clase).texto}
                       </span>
                     </td>
-                    <td style={{ padding: "16px 20px", textAlign: "right", whiteSpace: "nowrap" }}>
+                    <td style={{ padding: "16px 20px", textAlign: "right", whiteSpace: "nowrap", position: "relative" }}>
                       <button
                         type="button"
-                        onClick={() => {
-                          setClaseAEditar(clase);
-                        }}
+                        onClick={() => setDropdownAccionesAbierto(dropdownAccionesAbierto === clase.id ? null : clase.id)}
                         style={{
                           padding: "10px 14px",
-                          background: "#eff6ff",
-                          color: "#1d4ed8",
-                          border: "1px solid #bfdbfe",
-                          borderRadius: 8,
-                          fontSize: "0.875rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          marginRight: "8px",
-                        }}
-                      >
-                        ✏️ Editar
-                      </button>
-                      <button
-                        type="button"
-                        disabled={clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA"}
-                        onClick={() => {
-                          setClaseASuspender(clase);
-                          setErrorSuspender(null);
-                        }}
-                        style={{
-                          padding: "10px 14px",
-                          background: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "#f1f5f9" : "#fff7ed",
-                          color: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "#94a3b8" : "#c2410c",
-                          border: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "1px solid #e2e8f0" : "1px solid #ffedd5",
-                          borderRadius: 8,
-                          fontSize: "0.875rem",
-                          fontWeight: 700,
-                          cursor: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "not-allowed" : "pointer",
-                          marginRight: "8px",
-                        }}
-                      >
-                        ⏸️ Suspender
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setClaseAEliminar(clase);
-                          setToast(null);
-                          setErrorEnDialogo(null);
-                        }}
-                        style={{
-                          padding: "10px 14px",
-                          background: "#fee2e2",
-                          color: "#991b1b",
-                          border: "1px solid #fecaca",
+                          background: "#fffbeb",
+                          color: "#d97706",
+                          border: "1px solid #fde68a",
                           borderRadius: 8,
                           fontSize: "0.875rem",
                           fontWeight: 700,
                           cursor: "pointer",
                         }}
                       >
-                        🗑️ Eliminar
+                        📋Acciones
                       </button>
+
+                      {dropdownAccionesAbierto === clase.id && (
+                        <>
+                          <div 
+                            onClick={() => setDropdownAccionesAbierto(null)} 
+                            style={{ position: "fixed", inset: 0, zIndex: 40 }}
+                          />
+                          <div
+                            style={{
+                              position: "absolute",
+                              right: "20px",
+                              top: "100%",
+                              marginTop: "8px",
+                              background: "white",
+                              border: "1px solid rgba(0,0,0,0.1)",
+                              borderRadius: "12px",
+                              boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                              zIndex: 50,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "8px",
+                              padding: "12px",
+                              minWidth: "160px"
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setClaseAEditar(clase);
+                                setDropdownAccionesAbierto(null);
+                              }}
+                              style={{
+                                padding: "10px 14px",
+                                background: "#eff6ff",
+                                color: "#1d4ed8",
+                                border: "1px solid #bfdbfe",
+                                borderRadius: 8,
+                                fontSize: "0.875rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                textAlign: "left",
+                                width: "100%"
+                              }}
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button
+                              type="button"
+                              disabled={clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA"}
+                              onClick={() => {
+                                setClaseASuspender(clase);
+                                setErrorSuspender(null);
+                                setDropdownAccionesAbierto(null);
+                              }}
+                              style={{
+                                padding: "10px 14px",
+                                background: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "#f1f5f9" : "#fff7ed",
+                                color: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "#94a3b8" : "#c2410c",
+                                border: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "1px solid #e2e8f0" : "1px solid #ffedd5",
+                                borderRadius: 8,
+                                fontSize: "0.875rem",
+                                fontWeight: 700,
+                                cursor: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "not-allowed" : "pointer",
+                                textAlign: "left",
+                                width: "100%"
+                              }}
+                            >
+                              ⏸️ Suspender
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setClaseAEliminar(clase);
+                                setToast(null);
+                                setErrorEnDialogo(null);
+                                setDropdownAccionesAbierto(null);
+                              }}
+                              style={{
+                                padding: "10px 14px",
+                                background: "#fee2e2",
+                                color: "#991b1b",
+                                border: "1px solid #fecaca",
+                                borderRadius: 8,
+                                fontSize: "0.875rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                textAlign: "left",
+                                width: "100%"
+                              }}
+                            >
+                              🗑️ Eliminar
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
