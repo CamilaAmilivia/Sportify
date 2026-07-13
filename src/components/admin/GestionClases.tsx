@@ -58,6 +58,7 @@ export function GestionClases({
   const [busquedaProfesor, setBusquedaProfesor] = useState("");
   const [dropdownProfesorAbierto, setDropdownProfesorAbierto] = useState(false);
   const [dropdownAccionesAbierto, setDropdownAccionesAbierto] = useState<number | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number, bottom: number, right: number, alignUp: boolean } | null>(null);
 
   const [claseASuspender, setClaseASuspender] = useState<Clase | null>(null);
   const [suspendiendo, setSuspendiendo] = useState(false);
@@ -553,7 +554,22 @@ export function GestionClases({
                     <td style={{ padding: "16px 20px", textAlign: "right", whiteSpace: "nowrap", position: "relative" }}>
                       <button
                         type="button"
-                        onClick={() => setDropdownAccionesAbierto(dropdownAccionesAbierto === clase.id ? null : clase.id)}
+                        onClick={(e) => {
+                          if (dropdownAccionesAbierto === clase.id) {
+                            setDropdownAccionesAbierto(null);
+                          } else {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const spaceBelow = window.innerHeight - rect.bottom;
+                            const alignUp = spaceBelow < 200;
+                            setDropdownPos({
+                              top: rect.top,
+                              bottom: rect.bottom,
+                              right: window.innerWidth - rect.right,
+                              alignUp
+                            });
+                            setDropdownAccionesAbierto(clase.id);
+                          }
+                        }}
                         style={{
                           padding: "10px 14px",
                           background: "#fffbeb",
@@ -576,10 +592,12 @@ export function GestionClases({
                           />
                           <div
                             style={{
-                              position: "absolute",
-                              right: "20px",
-                              top: "100%",
-                              marginTop: "8px",
+                              position: "fixed",
+                              right: dropdownPos?.right,
+                              top: dropdownPos?.alignUp ? "auto" : dropdownPos?.bottom,
+                              bottom: dropdownPos?.alignUp ? (window.innerHeight - (dropdownPos?.top || 0)) : "auto",
+                              marginTop: dropdownPos?.alignUp ? 0 : "8px",
+                              marginBottom: dropdownPos?.alignUp ? "8px" : 0,
                               background: "white",
                               border: "1px solid rgba(0,0,0,0.1)",
                               borderRadius: "12px",
