@@ -753,10 +753,10 @@ export function GestionClases({
             >
               {errorEnDialogo ? "No se puede eliminar" : "Eliminar clase"}
             </h3>
-            <p style={{ margin: 0, color: "var(--color-gray)", lineHeight: 1.6, fontWeight: 500 }}>
+            <p style={{ margin: 0, color: "var(--color-gray)", lineHeight: 1.6, fontWeight: 500, whiteSpace: "pre-line" }}>
               {errorEnDialogo 
                 ? errorEnDialogo 
-                : `Esta seguro que quiere eliminar esta clase? se borraran todas las instancias hasta 31/12/${new Date().getFullYear()}.`}
+                : `¿Está seguro de que quiere eliminar esta clase?\nSe eliminarán todas sus instancias hasta el 31/12/${new Date().getFullYear()}.`}
             </p>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
