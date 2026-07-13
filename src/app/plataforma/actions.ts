@@ -333,19 +333,6 @@ export async function crearClase(formData: {
       // Clases que se superponen en cualquier parte de la hora.
       const clasesEnHorario = await obtenerClasesSuperpuestas(new Date(fechaActual));
 
-      // Disciplina repetida
-      const yaExisteDisciplina = clasesEnHorario.find(
-        (clase) => clase.disciplinaId === formData.disciplinaId
-      );
-
-      if (yaExisteDisciplina) {
-        erroresClases.push(
-          `Clase del ${formatearFecha(fechaActual)} no creada: ya existe una clase de esta disciplina en el mismo horario`
-        );
-
-        fechaActual.setDate(fechaActual.getDate() + 7);
-        continue;
-      }
 
       // Cupos máximos
       const cuposActuales = calcularCuposOcupadosEnPeriodo(
