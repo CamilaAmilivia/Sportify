@@ -56,21 +56,34 @@ export default async function PaginaMisClases({
       include: { clase: { include: { disciplina: true } } },
     });
 
-    // Ausencias en últimos 30 días (solo donde el profesor marcó presente: false)
-    const asistenciasAusente = await prisma.asistencia.findMany({
+    // Ausencias en últimos 30 días (clases finalizadas sin registro de asistencia)
+    const inscripcionesPasadas = await prisma.inscripcion.findMany({
       where: {
         usuarioId: usuario.id,
-        presente: false,
-        clase: { fechaHora: { gte: treintaDiasAtras, lt: limiteInferior } },
+        estado: "ACTIVA",
+        clase: { 
+          estado: "ACTIVA",
+          fechaHora: { gte: treintaDiasAtras, lt: ahora } 
+        }
       },
-      include: { clase: { include: { inscripciones: { where: { usuarioId: usuario.id } } } } },
+      include: {
+        clase: {
+          include: { asistencias: { where: { usuarioId: usuario.id, presente: true } } }
+        }
+      }
+    });
+
+    const inscripcionesAusentes = inscripcionesPasadas.filter((insc) => {
+      const finVentana = new Date(
+        insc.clase.fechaHora.getTime() + insc.clase.duracionMin * 60000 + 15 * 60000
+      );
+      // Es ausente si la ventana cerró y no hay asistencia
+      return ahora > finVentana && insc.clase.asistencias.length === 0;
     });
 
     // Aplicar penalizaciones por ausencia (idempotente)
     await Promise.all(
-      asistenciasAusente
-        .flatMap((a) => a.clase.inscripciones)
-        .map((insc) => aplicarPenalizacionPorAusencia(insc.id))
+      inscripcionesAusentes.map((insc) => aplicarPenalizacionPorAusencia(insc.id))
     );
 
     const ausenciasIndividual = await prisma.penalizacion.count({
@@ -232,8 +245,8 @@ export default async function PaginaMisClases({
         {/* Mi actividad */}
         <p style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 12 }}>Mi actividad</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 24 }}>
-          <StatCard icono="👤" color="#f0fdf4" iconColor="#16a34a" titulo="Ausencias" valor={ausenciasIndividual} subtitulo={ausenciasIndividual === 0 ? "Sin inconvenientes" : "Clases individuales"} />
-          <StatCard icono="⚠️" color="#fefce8" iconColor="#ca8a04" titulo="Ausencias abono" valor={ausenciasAbono} subtitulo={ausenciasAbono === 0 ? "Sin inconvenientes" : "Clases de abono"} />
+          <StatCard icono="👤" color="#fef2f2" iconColor="#dc2626" titulo="Ausencias (últimos 30 días)" valor={ausenciasIndividual} subtitulo={ausenciasIndividual === 0 ? "Sin inconvenientes" : "Clases individuales"} />
+          <StatCard icono="⚠️" color="#fefce8" iconColor="#ca8a04" titulo="Ausencias abono (últimos 30 días)" valor={ausenciasAbono} subtitulo={ausenciasAbono === 0 ? "Sin inconvenientes" : "Clases de abono"} />
           <StatCard icono="🎁" color="#eff6ff" iconColor="#3b82f6" titulo="Clases gratis disponibles" valor={creditosDisponibles} subtitulo={creditosDisponibles > 0 ? "¡Aprovechala!" : "Sin créditos"} />
         </div>
 
@@ -261,7 +274,7 @@ export default async function PaginaMisClases({
               {proximasClases.length > 0 && proximasClases.map((insc, i) => {
                 const estaPresente = insc.clase.asistencias.some((a) => a.presente);
                 const inicioVentana = new Date(insc.clase.fechaHora.getTime() - 10 * 60000);
-                const finVentana = new Date(insc.clase.fechaHora.getTime() + (insc.clase.duracionMin + 30) * 60000);
+                const finVentana = new Date(insc.clase.fechaHora.getTime() + (insc.clase.duracionMin + 15) * 60000);
                 const estaEnVentana = ahora >= inicioVentana && ahora <= finVentana;
 
                 return (
