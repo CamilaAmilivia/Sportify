@@ -52,7 +52,12 @@ export async function solicitarRecuperacion(
       });
 
       // 3. Enviar correo
-      await sendPasswordResetEmail(usuario.email, token);
+      try {
+        await sendPasswordResetEmail(usuario.email, token);
+      } catch (emailError) {
+        console.error("Error al enviar email de recuperación:", emailError);
+        return { mensaje: "No se pudo enviar el correo de recuperación. Por favor, verifica la configuración del servidor de correo." };
+      }
     }
 
     // Siempre devolvemos éxito incluso si el usuario no existe, para evitar enumeración de usuarios

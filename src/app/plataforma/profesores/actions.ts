@@ -125,7 +125,17 @@ export async function registrarProfesor(
     });
 
     // Enviar correo
-    await sendInitialPasswordEmail(email, token);
+    try {
+      await sendInitialPasswordEmail(email, token);
+    } catch (emailError) {
+      // Revertir la creación del usuario si falla el envío del correo
+      await prisma.usuario.delete({ where: { id: nuevoUsuario.id } });
+      console.error("Error al enviar email de registro:", emailError);
+      return {
+        errores: {},
+        mensaje: "No se pudo enviar el correo de registro. Por favor, verifica la configuración del servidor de correo e intenta nuevamente.",
+      };
+    }
   } catch (error) {
     console.error("Error al registrar profesor:", error);
     return {
