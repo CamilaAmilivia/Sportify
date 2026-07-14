@@ -19,16 +19,16 @@ export const metadata = {
 };
 
 type PaginaMisClasesProps = {
-  searchParams: Promise<{ dias?: string; diasEspera?: string }>;
+  searchParams: Promise<{ extra?: string }>;
 };
 
 export default async function PaginaMisClases({
   searchParams,
 }: PaginaMisClasesProps) {
   const usuario = await requerirUsuarioActual();
-  const { dias, diasEspera } = await searchParams;
-  const rangoDias = Math.max(7, Number(dias) || 7);
-  const rangoEspera = Math.max(7, Number(diasEspera) || 7);
+  const { extra } = await searchParams;
+  const extraClasesCount = Math.max(0, Number(extra) || 0);
+  const rangoDias = 7;
 
   if (usuario.rol === "ADMIN") {
     redirect("/plataforma");
@@ -139,7 +139,7 @@ export default async function PaginaMisClases({
     const hoyInicio = new Date(ahora);
     hoyInicio.setHours(0, 0, 0, 0);
 
-    const proximasClases = await prisma.inscripcion.findMany({
+    const proximasClasesBase = await prisma.inscripcion.findMany({
       where: {
         usuarioId: usuario.id,
         estado: "ACTIVA",
@@ -161,13 +161,38 @@ export default async function PaginaMisClases({
       },
     });
 
-    const finRangoEspera = new Date(ahora);
-    finRangoEspera.setDate(finRangoEspera.getDate() + rangoEspera);
+    let proximasClasesExtra: typeof proximasClasesBase = [];
+    if (extraClasesCount > 0) {
+      proximasClasesExtra = await prisma.inscripcion.findMany({
+        where: {
+          usuarioId: usuario.id,
+          estado: "ACTIVA",
+          clase: { fechaHora: { gt: finRango }, estado: { in: ["ACTIVA", "SUSPENDIDA"] } },
+        },
+        orderBy: { clase: { fechaHora: "asc" } },
+        take: extraClasesCount,
+        include: {
+          clase: {
+            include: {
+              disciplina: true,
+              asistencias: {
+                where: {
+                  usuarioId: usuario.id,
+                },
+              },
+            },
+          },
+          pago: { select: { tipo: true } },
+        },
+      });
+    }
+
+    const proximasClases = [...proximasClasesBase, ...proximasClasesExtra];
 
     const pendientes = await prisma.listaEspera.findMany({
       where: {
         usuarioId: usuario.id,
-        clase: { fechaHora: { gt: limiteInferior, lte: finRangoEspera }, estado: "ACTIVA" },
+        clase: { fechaHora: { gt: limiteInferior }, estado: "ACTIVA" },
       },
       orderBy: { clase: { fechaHora: "asc" } },
       include: { clase: { include: { disciplina: true } } },
@@ -180,18 +205,11 @@ export default async function PaginaMisClases({
     const pendientesActualizados = await prisma.listaEspera.findMany({
       where: {
         usuarioId: usuario.id,
-        clase: { fechaHora: { gt: limiteInferior, lte: finRangoEspera }, estado: "ACTIVA" },
+        clase: { fechaHora: { gt: limiteInferior }, estado: "ACTIVA" },
       },
       orderBy: { clase: { fechaHora: "asc" } },
       include: { clase: { include: { disciplina: true } } },
     });
-
-    const hayMasEspera = await prisma.listaEspera.count({
-      where: {
-        usuarioId: usuario.id,
-        clase: { fechaHora: { gt: finRangoEspera }, estado: "ACTIVA" },
-      },
-    }) > 0;
 
     const hayMasClases = await prisma.inscripcion.count({
       where: {
@@ -199,7 +217,7 @@ export default async function PaginaMisClases({
         estado: "ACTIVA",
         clase: { fechaHora: { gt: finRango }, estado: { in: ["ACTIVA", "SUSPENDIDA"] } },
       },
-    }) > 0;
+    }) > extraClasesCount;
 
     const ventanaNotificacion = new Date(ahora.getTime() - 24 * 60 * 60 * 1000);
 
@@ -263,12 +281,12 @@ export default async function PaginaMisClases({
           {/* Próximas clases */}
           <div>
             <p style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 12 }}>
-              Próximas clases ({rangoDias} días)
+              Próximas clases
             </p>
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden" }}>
               {proximasClases.length === 0 && (
                 <p style={{ color: "var(--color-gray)", padding: 24, textAlign: "center", margin: 0 }}>
-                  No tenés clases en los próximos {rangoDias} días.
+                  No tenés próximas clases confirmadas.
                 </p>
               )}
               {proximasClases.length > 0 && proximasClases.map((insc, i) => {
@@ -345,12 +363,31 @@ export default async function PaginaMisClases({
                   </div>
                 );
               })}
+              {hayMasClases && (
+                <div style={{ padding: 16, textAlign: "center", borderTop: "1px solid #f3f4f6" }}>
+                  <Link
+                    href={`/plataforma/mis-clases?extra=${extraClasesCount + 3}`}
+                    style={{
+                      display: "inline-block",
+                      background: "#f3f4f6",
+                      color: "#374151",
+                      padding: "8px 16px",
+                      borderRadius: 8,
+                      fontWeight: 600,
+                      fontSize: "0.9rem",
+                      textDecoration: "none",
+                    }}
+                  >
+                    Ver más
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Lista de espera */}
           <div>
-            <p style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 12 }}>En lista de espera ({rangoEspera} días)</p>
+            <p style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 12 }}>En lista de espera</p>
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden" }}>
               {pendientesActualizados.length === 0 && (
                 <div style={{ padding: 28, textAlign: "center" }}>
