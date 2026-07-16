@@ -19,7 +19,7 @@ export async function createClasesSprint2(
   const discPilates = disciplinas.find(d => d.nombre === "Pilates")!;
 
   // Llamar submódulo QR
-  await createClasesQR(prisma, prof1.id, discFuncional.id, clientesIds);
+  await createClasesQR(prisma, prof1.id, prof2.id, discFuncional.id, clientesIds);
   
   // Lógica de clases repetitivas integrada
   console.log("📅 Creando clases repetitivas hasta fin de año...");

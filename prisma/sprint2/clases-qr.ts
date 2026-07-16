@@ -3,6 +3,7 @@ import { PrismaClient } from "../../src/generated/prisma/client";
 export async function createClasesQR(
   prisma: PrismaClient,
   profesorId: number,
+  profesor2Id: number,
   disciplinaId: number,
   clientesIds: number[]
 ) {
@@ -58,7 +59,22 @@ export async function createClasesQR(
     }
   });
 
-  const clases = [claseTarde, claseAhora, claseTemprano];
+  // 4. Clase Ahora QR con Profesor 2
+  const claseAhoraProf2 = await prisma.clase.create({
+    data: {
+      titulo: "Clase Ahora QR (Profesor 2)",
+      descripcion: "Posible tomar asistencia - Prof 2",
+      fechaHora: horaAhora,
+      duracionMin: 60,
+      cupoMaximo: 10,
+      precio: 0,
+      estado: "ACTIVA",
+      disciplinaId: disciplinaId,
+      profesorId: profesor2Id,
+    }
+  });
+
+  const clases = [claseTarde, claseAhora, claseTemprano, claseAhoraProf2];
 
   // Inscribir a los clientes en las tres clases
   for (const clase of clases) {
