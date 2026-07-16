@@ -93,13 +93,13 @@ export async function createClasesSprint2(
     profesorId: prof1.id
   });
 
-  // 2. Clases de Funcional con nombre "Mañanas a pleno", los lunes a partir del 27/07/2026 a las 8hs con cupo 20
+  // 2. Clases de Funcional con nombre "Mañanas a pleno", los lunes a partir del 27/07/2026 a las 8hs con cupo 10
   await crearSerie({
     titulo: "Mañanas a pleno",
     fechaInicio: "2026-07-27",
     hora: 8,
     minutos: 0,
-    cupoMaximo: 20,
+    cupoMaximo: 10,
     disciplinaId: discFuncional.id,
     profesorId: prof2.id
   });
