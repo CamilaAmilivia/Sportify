@@ -44,7 +44,7 @@ export async function registrarCliente(
   const nombre = (formData.get("nombre") as string)?.trim();
   const apellido = (formData.get("apellido") as string)?.trim();
   const email = (formData.get("email") as string)?.trim().toLowerCase();
-  const password = formData.get("password") as string;
+  const password = (formData.get("password") as string)?.trim();
   const fechaNacStr = formData.get("fechaNac") as string;
   const archivo = formData.get("aptoFisico") as File | null;
   const declaracionAptoFisico = formData.get("declaracionAptoFisico");

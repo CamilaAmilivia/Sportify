@@ -34,8 +34,8 @@ export async function crearPassword(
   formData: FormData
 ): Promise<CrearState> {
   const token = formData.get("token") as string;
-  const password = formData.get("password") as string;
-  const confirmPassword = formData.get("confirmPassword") as string;
+  const password = (formData.get("password") as string)?.trim();
+  const confirmPassword = (formData.get("confirmPassword") as string)?.trim();
 
   const errores: CrearState["errores"] = {};
 
