@@ -1,38 +1,282 @@
 "use client";
 
-import { useState } from "react";
-import { PanelConstruccion } from "@/components/ui/PanelConstruccion"
-import { TarjetaAccion } from "@/components/ui/TarjetaAccion"
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { TituloPagina } from "@/components/ui/TituloPagina";
 import { FormularioCrearClase } from "@/components/ui/FormularioCrearClase";
+import { FormularioEditarClase } from "@/components/ui/FormularioEditarClase";
+import { ModalInscriptosClase } from "@/components/ui/ModalInscriptosClase";
+import { eliminarClasesSimilares, obtenerClasesFiltradas, suspenderClase } from "@/app/plataforma/clases/actions";
+import { Toast } from "@/components/ui/Toast";
+
+type Clase = {
+  id: number;
+  titulo: string;
+  fechaHora: Date | string;
+  duracionMin: number;
+  estado: string;
+  disciplina: { nombre: string };
+  profesor: { id: number; nombre: string; apellido: string };
+  serieId?: string | number | null;
+  cupoMaximo?: number;
+  precio?: number;
+};
 
 type GestionClasesProps = {
   disciplinas: Array<{ id: number; nombre: string }>;
+  profesores: Array<{
+    id: number;
+    nombre: string;
+    apellido: string;
+    dni: number;
+  }>;
 };
 
-export function GestionClases({ disciplinas }: GestionClasesProps) {
+type VistaFiltro = "SEMANA_ACTUAL" | "SEMANA_PROXIMA" | "RANGO_FECHAS" | "DIA_ESPECIFICO";
+
+export function GestionClases({
+  disciplinas,
+  profesores,
+}: GestionClasesProps) {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [vistaFiltro, setVistaFiltro] = useState<VistaFiltro>("SEMANA_ACTUAL");
+  
+  const [fechaInicioPersonalizada, setFechaInicioPersonalizada] = useState<string>("");
+  const [fechaFinPersonalizada, setFechaFinPersonalizada] = useState<string>("");
+  
+  const [clases, setClases] = useState<Clase[]>([]);
+  const [cargando, setCargando] = useState(false);
+  const [claseAEliminar, setClaseAEliminar] = useState<Clase | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
+
+  const [fechaFiltroEspecifica, setFechaFiltroEspecifica] = useState<string>("");
+
+  const [filtroDisciplinaNombre, setFiltroDisciplinaNombre] = useState<string | "TODAS">("TODAS");
+  const [filtroEstado, setFiltroEstado] = useState<string>("TODOS");
+
+  const [filtroProfesorId, setFiltroProfesorId] = useState<number | "TODOS">("TODOS");
+  const [busquedaProfesor, setBusquedaProfesor] = useState("");
+  const [dropdownProfesorAbierto, setDropdownProfesorAbierto] = useState(false);
+  const [dropdownAccionesAbierto, setDropdownAccionesAbierto] = useState<number | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number, bottom: number, right: number, alignUp: boolean } | null>(null);
+
+  const [claseASuspender, setClaseASuspender] = useState<Clase | null>(null);
+  const [suspendiendo, setSuspendiendo] = useState(false);
+  const [errorSuspender, setErrorSuspender] = useState<string | null>(null);
+
+  const [claseAEditar, setClaseAEditar] = useState<Clase | null>(null);
+  const [errorEnDialogo, setErrorEnDialogo] = useState<string | null>(null);
+  
+  const [claseInscriptos, setClaseInscriptos] = useState<Clase | null>(null);
+  
+  const [toast, setToast] = useState<{ tipo: "success" | "error"; mensaje: string } | null>(null);
+
+  const router = useRouter();
+
+  const fetchClases = useCallback(async () => {
+    setCargando(true);
+    try {
+      let inicio: Date;
+      let fin: Date;
+      
+      const ahora = new Date();
+      
+      if (vistaFiltro === "SEMANA_ACTUAL") {
+        // Lunes de la semana actual
+        const diaSemana = ahora.getDay() === 0 ? 6 : ahora.getDay() - 1; // 0 es Domingo
+        inicio = new Date(ahora);
+        inicio.setDate(ahora.getDate() - diaSemana);
+        inicio.setHours(0, 0, 0, 0);
+        
+        fin = new Date(inicio);
+        fin.setDate(inicio.getDate() + 6);
+        fin.setHours(23, 59, 59, 999);
+      } else if (vistaFiltro === "SEMANA_PROXIMA") {
+        const diaSemana = ahora.getDay() === 0 ? 6 : ahora.getDay() - 1;
+        inicio = new Date(ahora);
+        inicio.setDate(ahora.getDate() - diaSemana + 7);
+        inicio.setHours(0, 0, 0, 0);
+        
+        fin = new Date(inicio);
+        fin.setDate(inicio.getDate() + 6);
+        fin.setHours(23, 59, 59, 999);
+      } else if (vistaFiltro === "RANGO_FECHAS") {
+        // RANGO_FECHAS
+        if (!fechaInicioPersonalizada || !fechaFinPersonalizada) {
+          setCargando(false);
+          return;
+        }
+        // Use local dates accurately
+        inicio = new Date(fechaInicioPersonalizada + "T00:00:00");
+        fin = new Date(fechaFinPersonalizada + "T23:59:59");
+      } else {
+        // DIA_ESPECIFICO
+        if (!fechaFiltroEspecifica) {
+          setCargando(false);
+          return;
+        }
+        inicio = new Date(fechaFiltroEspecifica + "T00:00:00");
+        fin = new Date(fechaFiltroEspecifica + "T23:59:59");
+      }
+      
+      const resultados = await obtenerClasesFiltradas(inicio.toISOString(), fin.toISOString());
+      setClases(resultados as unknown as Clase[]);
+    } catch (error) {
+      console.error("Error obteniendo clases:", error);
+    } finally {
+      setCargando(false);
+    }
+  }, [vistaFiltro, fechaInicioPersonalizada, fechaFinPersonalizada, fechaFiltroEspecifica]);
+
+  useEffect(() => {
+    void Promise.resolve().then(fetchClases);
+  }, [fetchClases]);
+
+  const formatearFecha = (fechaString: Date | string) => {
+    const fecha = new Date(fechaString);
+    return fecha.toLocaleDateString("es-AR", {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const formatearHorario = (fechaString: Date | string, duracion: number) => {
+    const inicio = new Date(fechaString);
+    const fin = new Date(inicio.getTime() + duracion * 60000);
+    
+    const options: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
+    return `${inicio.toLocaleTimeString("es-AR", options)} a ${fin.toLocaleTimeString("es-AR", options)} h`;
+  };
+
+  const obtenerEstadoClase = (clase: Clase) => {
+    if (clase.estado === "SUSPENDIDA" || clase.estado === "CANCELADA") {
+      return { texto: "Suspendida", bg: "#fee2e2", color: "#dc2626", border: "#fecaca" };
+    }
+    const fin = new Date(new Date(clase.fechaHora).getTime() + clase.duracionMin * 60000);
+    const ahora = new Date();
+    if (ahora >= fin) {
+      return { texto: "Cerrada", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" };
+    }
+    return { texto: "En horario", bg: "#dcfce7", color: "#15803d", border: "#bbf7d0" };
+  };
+
+  const confirmarEliminacion = async () => {
+    if (!claseAEliminar) return;
+
+    setEliminando(true);
+    setErrorEnDialogo(null);
+
+    try {
+      const resultado = await eliminarClasesSimilares(claseAEliminar.id);
+
+      if (resultado.error) {
+        setErrorEnDialogo(resultado.error);
+        setToast({
+          tipo: "error",
+          mensaje: resultado.error,
+        });
+        return;
+      }
+
+      setToast({
+        tipo: "success",
+        mensaje: `Se eliminaron ${resultado.cantidadEliminadas} clase${resultado.cantidadEliminadas !== 1 ? "s" : ""} correctamente.`,
+      });
+
+      setClaseAEliminar(null);
+      setErrorEnDialogo(null);
+      router.refresh();
+      await fetchClases();
+    } catch (error) {
+      console.error("Error eliminando clases:", error);
+      const mensajeError = "No se pudo eliminar la clase. Intenta nuevamente.";
+      setErrorEnDialogo(mensajeError);
+      setToast({
+        tipo: "error",
+        mensaje: mensajeError,
+      });
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  const confirmarSuspension = async () => {
+    if (!claseASuspender) return;
+
+    setSuspendiendo(true);
+    setErrorSuspender(null);
+
+    try {
+      const resultado = await suspenderClase(claseASuspender.id);
+
+      if (resultado.error) {
+        setErrorSuspender(resultado.error);
+        return;
+      }
+
+      setClaseASuspender(null);
+      setToast({ tipo: "success", mensaje: "La clase fue suspendida y se notificó a los inscriptos." });
+      router.refresh();
+      await fetchClases();
+    } catch (error) {
+      console.error("Error suspendiendo clase:", error);
+      setErrorSuspender("No se pudo suspender la clase. Intenta nuevamente.");
+    } finally {
+      setSuspendiendo(false);
+    }
+  };
+
+  const clasesFiltradasYDisponibles = clases.filter((clase) => {
+    if (filtroProfesorId !== "TODOS" && clase.profesor.id !== filtroProfesorId) {
+      return false;
+    }
+    if (filtroDisciplinaNombre !== "TODAS" && clase.disciplina.nombre !== filtroDisciplinaNombre) {
+      return false;
+    }
+    if (filtroEstado !== "TODOS" && obtenerEstadoClase(clase).texto !== filtroEstado) {
+      return false;
+    }
+    return true;
+  });
+
+  const sharedInputStyle = {
+    height: "44px",
+    padding: "0 12px",
+    background: "#f8fafc",
+    color: "var(--color-dark)",
+    border: "1px solid rgba(0,0,0,0.1)",
+    borderRadius: "8px",
+    fontSize: "0.95rem",
+    outline: "none",
+    fontWeight: 500,
+    boxSizing: "border-box" as const,
+  };
+
+  const sharedSelectStyle = {
+    ...sharedInputStyle,
+    padding: "0 36px 0 12px",
+    appearance: "none" as const,
+    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 12px center",
+    backgroundSize: "16px",
+  };
 
   return (
     <>
       <TituloPagina
-        titulo="Gestión de Clases"
-        descripcion="Desde acá el administrador va a poder crear, editar, cancelar y consultar clases."
+        titulo="Gestión de clases"
       />
 
-      <div
-        style={{
-          marginBottom: 32,
-        }}
-      >
+      <div style={{ marginBottom: "40px" }}>
         <button
           type="button"
-          onClick={() => {
-            console.log("=== BOTÓN CREAR CLASE CLICKEADO ===");
-            setMostrarFormulario(true);
-          }}
+          onClick={() => setMostrarFormulario(true)}
           style={{
-            padding: "20px 24px",
+            padding: "16px 24px",
             background: "#22c55e",
             color: "white",
             border: "none",
@@ -40,49 +284,685 @@ export function GestionClases({ disciplinas }: GestionClasesProps) {
             fontSize: "1rem",
             fontWeight: 600,
             cursor: "pointer",
-            marginBottom: 20,
           }}
         >
-          ➕ Crear Nueva Clase
+          ➕ Crear clase
         </button>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: 20,
-          marginBottom: 32,
-        }}
-      >
-        <TarjetaAccion
-          titulo="Ver cronograma"
-          descripcion="Consultar las clases cargadas por fecha y disciplina."
-          href="#"
-          icono="▣"
-        />
-
-        <TarjetaAccion
-          titulo="Clases canceladas"
-          descripcion="Revisar clases canceladas o finalizadas."
-          href="#"
-          icono="⚠️"
-        />
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
+        <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 800, color: "var(--color-dark)" }}>Lista de clases</h2>
+        <div style={{ height: "1px", background: "rgba(0,0,0,0.1)", flex: 1 }}></div>
       </div>
 
-      <PanelConstruccion
-        titulo="Listado de clases"
-        descripcion="Acá luego se mostrará una tabla con las clases creadas en la base de datos."
-      />
+      <div style={{ background: "white", padding: "28px", borderRadius: "18px", marginBottom: "32px", border: "1px solid rgba(0,0,0,0.06)", boxShadow: "0 8px 24px rgba(0,0,0,0.04)" }}>
+        <div style={{ marginBottom: "20px" }}>
+          <h3 style={{ margin: 0, color: "var(--color-dark)", fontSize: "1.2rem", fontWeight: 700 }}>Filtros de vista</h3>
+        </div>
+        <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div>
+            <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Período</label>
+            <select
+              value={vistaFiltro}
+              onChange={(e) => setVistaFiltro(e.target.value as VistaFiltro)}
+              style={sharedSelectStyle}
+            >
+              <option value="SEMANA_ACTUAL">Semana actual</option>
+              <option value="SEMANA_PROXIMA">Semana próxima</option>
+              <option value="DIA_ESPECIFICO">Día específico</option>
+              <option value="RANGO_FECHAS">Rango de fechas</option>
+            </select>
+          </div>
+
+          {vistaFiltro === "DIA_ESPECIFICO" && (
+            <div>
+              <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Seleccionar día</label>
+              <input
+                type="date"
+                value={fechaFiltroEspecifica}
+                onChange={(e) => setFechaFiltroEspecifica(e.target.value)}
+                style={sharedInputStyle}
+              />
+            </div>
+          )}
+
+          {vistaFiltro === "RANGO_FECHAS" && (
+            <>
+              <div>
+                <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Desde</label>
+                <input
+                  type="date"
+                  value={fechaInicioPersonalizada}
+                  onChange={(e) => setFechaInicioPersonalizada(e.target.value)}
+                  style={sharedInputStyle}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Hasta</label>
+                <input
+                  type="date"
+                  value={fechaFinPersonalizada}
+                  onChange={(e) => setFechaFinPersonalizada(e.target.value)}
+                  style={sharedInputStyle}
+                />
+              </div>
+            </>
+          )}
+
+          <div>
+            <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Disciplina</label>
+            <select
+              value={filtroDisciplinaNombre}
+              onChange={(e) => setFiltroDisciplinaNombre(e.target.value)}
+              style={{ ...sharedSelectStyle, minWidth: "180px" }}
+            >
+              <option value="TODAS">Todas las disciplinas</option>
+              {disciplinas.map(d => (
+                <option key={d.id} value={d.nombre}>{d.nombre}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ position: "relative" }}>
+            <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Profesor</label>
+            <div 
+              onClick={() => setDropdownProfesorAbierto(!dropdownProfesorAbierto)}
+              style={{
+                ...sharedInputStyle,
+                cursor: "pointer",
+                minWidth: "250px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}
+            >
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {filtroProfesorId === "TODOS" 
+                  ? "Todos los profesores" 
+                  : (() => {
+                      const p = profesores.find(p => p.id === filtroProfesorId);
+                      return p ? `${p.nombre} ${p.apellido} (DNI: ${p.dni})` : "Seleccionar profesor";
+                    })()}
+              </span>
+              <svg style={{ flexShrink: 0, marginLeft: "8px" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            
+            {dropdownProfesorAbierto && (
+              <>
+                <div 
+                  onClick={() => setDropdownProfesorAbierto(false)} 
+                  style={{ position: "fixed", inset: 0, zIndex: 40 }}
+                />
+                <div 
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    minWidth: "100%",
+                    marginTop: "4px",
+                    background: "white",
+                    border: "1px solid rgba(0,0,0,0.1)",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    zIndex: 50,
+                    maxHeight: "300px",
+                    overflowY: "auto"
+                  }}
+                >
+                  <div style={{ padding: "8px", position: "sticky", top: 0, background: "white", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+                    <input 
+                      type="text" 
+                      placeholder="Buscar profesor..." 
+                      value={busquedaProfesor}
+                      onChange={(e) => setBusquedaProfesor(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        border: "1px solid rgba(0,0,0,0.1)",
+                        borderRadius: "6px",
+                        outline: "none",
+                        fontSize: "0.9rem",
+                        boxSizing: "border-box"
+                      }}
+                      autoFocus
+                    />
+                  </div>
+                  <div 
+                    onClick={() => {
+                      setFiltroProfesorId("TODOS");
+                      setDropdownProfesorAbierto(false);
+                      setBusquedaProfesor("");
+                    }}
+                    style={{
+                      padding: "10px 12px",
+                      cursor: "pointer",
+                      background: filtroProfesorId === "TODOS" ? "#f1f5f9" : "transparent",
+                      fontSize: "0.95rem"
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = filtroProfesorId === "TODOS" ? "#f1f5f9" : "transparent")}
+                  >
+                    Todos los profesores
+                  </div>
+                  {profesores
+                    .filter(p => `${p.nombre} ${p.apellido} ${p.dni}`.toLowerCase().includes(busquedaProfesor.toLowerCase()))
+                    .map(p => (
+                      <div 
+                        key={p.id}
+                        onClick={() => {
+                          setFiltroProfesorId(p.id);
+                          setDropdownProfesorAbierto(false);
+                          setBusquedaProfesor("");
+                        }}
+                        style={{
+                          padding: "10px 12px",
+                          cursor: "pointer",
+                          background: filtroProfesorId === p.id ? "#f1f5f9" : "transparent",
+                          fontSize: "0.95rem",
+                          whiteSpace: "nowrap"
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = filtroProfesorId === p.id ? "#f1f5f9" : "transparent")}
+                      >
+                        {p.nombre} {p.apellido} (DNI: {p.dni})
+                      </div>
+                    ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div>
+            <label style={{ display: "block", color: "var(--color-gray)", fontSize: "0.875rem", marginBottom: "8px", fontWeight: 600 }}>Estado</label>
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              style={{ ...sharedSelectStyle, minWidth: "150px" }}
+            >
+              <option value="TODOS">Todos los estados</option>
+              <option value="En horario">En horario</option>
+              <option value="Cerrada">Cerrada</option>
+              <option value="Suspendida">Suspendida</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <div style={{ background: "white", borderRadius: "18px", border: "1px solid rgba(0,0,0,0.06)", boxShadow: "0 8px 24px rgba(0,0,0,0.04)", overflow: "hidden" }}>
+        {cargando ? (
+          <div style={{ padding: "48px", textAlign: "center", color: "var(--color-gray)", fontWeight: 500 }}>Cargando clases...</div>
+        ) : clasesFiltradasYDisponibles.length === 0 ? (
+          <div style={{ padding: "48px", textAlign: "center", color: "var(--color-gray)", fontWeight: 500 }}>No hay clases para los filtros seleccionados.</div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "600px" }}>
+              <thead style={{ background: "#f8fafc", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+                <tr>
+                  <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Nombre</th>
+                  <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Disciplina</th>
+                  <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Profesor</th>
+                  <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Fecha</th>
+                  <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Horario</th>
+                  <th style={{ padding: "16px 20px", textAlign: "left", color: "var(--color-dark)", fontWeight: "700" }}>Estado</th>
+                  <th style={{ padding: "16px 20px", textAlign: "right", color: "var(--color-dark)", fontWeight: "700" }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {clasesFiltradasYDisponibles.map((clase, index) => (
+                  <tr key={clase.id} style={{ borderBottom: index === clasesFiltradasYDisponibles.length - 1 ? "none" : "1px solid rgba(0,0,0,0.06)" }}>
+                    <td style={{ padding: "16px 20px", color: "var(--color-dark)" }}>
+                      <div style={{ fontWeight: 500, fontSize: "1.05rem" }}>
+                        {clase.titulo}
+                      </div>
+                    </td>
+                    <td style={{ padding: "16px 20px", color: "var(--color-dark)" }}>
+                      <div style={{ fontWeight: 500, fontSize: "0.95rem" }}>
+                        {clase.disciplina.nombre}
+                      </div>
+                    </td>
+                    <td style={{ padding: "16px 20px", color: "var(--color-dark)", fontWeight: 500 }}>
+                      {clase.profesor.nombre} {clase.profesor.apellido}
+                    </td>
+                    <td style={{ padding: "16px 20px", color: "var(--color-dark)", fontWeight: 500 }}>
+                      {formatearFecha(clase.fechaHora)}
+                    </td>
+                    <td style={{ padding: "16px 20px", color: "var(--color-dark)" }}>
+                      <span style={{ 
+                        background: "#f8fafc", 
+                        padding: "8px 12px", 
+                        borderRadius: "8px",
+                        border: "1px solid rgba(0,0,0,0.06)",
+                        fontSize: "0.875rem",
+                        fontWeight: 600
+                      }}>
+                        {formatearHorario(clase.fechaHora, clase.duracionMin)}
+                      </span>
+                    </td>
+                    <td style={{ padding: "16px 20px", color: "var(--color-dark)" }}>
+                      <span style={{ 
+                        background: obtenerEstadoClase(clase).bg, 
+                        color: obtenerEstadoClase(clase).color,
+                        padding: "6px 10px", 
+                        borderRadius: "6px",
+                        border: `1px solid ${obtenerEstadoClase(clase).border}`,
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        whiteSpace: "nowrap"
+                      }}>
+                        {obtenerEstadoClase(clase).texto}
+                      </span>
+                    </td>
+                    <td style={{ padding: "16px 20px", textAlign: "right", whiteSpace: "nowrap", position: "relative" }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          if (dropdownAccionesAbierto === clase.id) {
+                            setDropdownAccionesAbierto(null);
+                          } else {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const spaceBelow = window.innerHeight - rect.bottom;
+                            const alignUp = spaceBelow < 200;
+                            setDropdownPos({
+                              top: rect.top,
+                              bottom: rect.bottom,
+                              right: window.innerWidth - rect.right,
+                              alignUp
+                            });
+                            setDropdownAccionesAbierto(clase.id);
+                          }
+                        }}
+                        style={{
+                          padding: "10px 14px",
+                          background: "#fffbeb",
+                          color: "#d97706",
+                          border: "1px solid #fde68a",
+                          borderRadius: 8,
+                          fontSize: "0.875rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        📋Acciones
+                      </button>
+
+                      {dropdownAccionesAbierto === clase.id && (
+                        <>
+                          <div 
+                            onClick={() => setDropdownAccionesAbierto(null)} 
+                            style={{ position: "fixed", inset: 0, zIndex: 40 }}
+                          />
+                          <div
+                            style={{
+                              position: "fixed",
+                              right: dropdownPos?.right,
+                              top: dropdownPos?.alignUp ? "auto" : dropdownPos?.bottom,
+                              bottom: dropdownPos?.alignUp ? (window.innerHeight - (dropdownPos?.top || 0)) : "auto",
+                              marginTop: dropdownPos?.alignUp ? 0 : "8px",
+                              marginBottom: dropdownPos?.alignUp ? "8px" : 0,
+                              background: "white",
+                              border: "1px solid rgba(0,0,0,0.1)",
+                              borderRadius: "12px",
+                              boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                              zIndex: 50,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "8px",
+                              padding: "12px",
+                              minWidth: "160px"
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setClaseInscriptos(clase);
+                                setDropdownAccionesAbierto(null);
+                              }}
+                              style={{
+                                padding: "10px 14px",
+                                background: "#f8fafc",
+                                color: "#334155",
+                                border: "1px solid #e2e8f0",
+                                borderRadius: 8,
+                                fontSize: "0.875rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                textAlign: "left",
+                                width: "100%"
+                              }}
+                            >
+                              👤 Inscriptos
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setClaseAEditar(clase);
+                                setDropdownAccionesAbierto(null);
+                              }}
+                              style={{
+                                padding: "10px 14px",
+                                background: "#eff6ff",
+                                color: "#1d4ed8",
+                                border: "1px solid #bfdbfe",
+                                borderRadius: 8,
+                                fontSize: "0.875rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                textAlign: "left",
+                                width: "100%"
+                              }}
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button
+                              type="button"
+                              disabled={clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA"}
+                              onClick={() => {
+                                setClaseASuspender(clase);
+                                setErrorSuspender(null);
+                                setDropdownAccionesAbierto(null);
+                              }}
+                              style={{
+                                padding: "10px 14px",
+                                background: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "#f1f5f9" : "#fff7ed",
+                                color: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "#94a3b8" : "#c2410c",
+                                border: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "1px solid #e2e8f0" : "1px solid #ffedd5",
+                                borderRadius: 8,
+                                fontSize: "0.875rem",
+                                fontWeight: 700,
+                                cursor: (clase.estado === "CANCELADA" || clase.estado === "SUSPENDIDA") ? "not-allowed" : "pointer",
+                                textAlign: "left",
+                                width: "100%"
+                              }}
+                            >
+                              ⏸️ Suspender
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setClaseAEliminar(clase);
+                                setToast(null);
+                                setErrorEnDialogo(null);
+                                setDropdownAccionesAbierto(null);
+                              }}
+                              style={{
+                                padding: "10px 14px",
+                                background: "#fee2e2",
+                                color: "#991b1b",
+                                border: "1px solid #fecaca",
+                                borderRadius: 8,
+                                fontSize: "0.875rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                textAlign: "left",
+                                width: "100%"
+                              }}
+                            >
+                              🗑️ Eliminar
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {mostrarFormulario && (
         <FormularioCrearClase
           disciplinas={disciplinas}
+          profesores={profesores}
           onClose={() => setMostrarFormulario(false)}
           onSuccess={() => {
             setMostrarFormulario(false);
-            window.location.reload();
+            router.refresh();
+            fetchClases(); // Refrescar las clases del lado del cliente
           }}
+        />
+      )}
+
+      {claseAEditar && (
+        <FormularioEditarClase
+          clase={claseAEditar}
+          disciplinas={disciplinas}
+          profesores={profesores}
+          onClose={() => setClaseAEditar(null)}
+          onSuccess={() => {
+            setClaseAEditar(null);
+            router.refresh();
+            fetchClases();
+          }}
+        />
+      )}
+
+      {claseAEliminar && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirmar-eliminar-clase"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            zIndex: 1001,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 460,
+              background: "white",
+              borderRadius: 8,
+              padding: "28px",
+              boxShadow: "0 24px 70px rgba(15, 23, 42, 0.25)",
+            }}
+          >
+            <h3
+              id="confirmar-eliminar-clase"
+              style={{
+                margin: "0 0 12px",
+                color: "var(--color-dark)",
+                fontSize: "1.25rem",
+                fontWeight: 800,
+              }}
+            >
+              {errorEnDialogo ? "No se puede eliminar" : "Eliminar clase"}
+            </h3>
+            <p style={{ margin: 0, color: "var(--color-gray)", lineHeight: 1.6, fontWeight: 500, whiteSpace: "pre-line" }}>
+              {errorEnDialogo 
+                ? errorEnDialogo 
+                : `¿Está seguro de que quiere eliminar esta clase?\nSe eliminarán todas sus instancias hasta el 31/12/${new Date().getFullYear()}.`}
+            </p>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
+              {!errorEnDialogo && (
+                <button
+                  type="button"
+                  disabled={eliminando}
+                  onClick={() => {
+                    setClaseAEliminar(null);
+                    setToast(null);
+                    setErrorEnDialogo(null);
+                  }}
+                  style={{
+                    padding: "12px 16px",
+                    background: "#f8fafc",
+                    color: "var(--color-dark)",
+                    border: "1px solid rgba(0,0,0,0.1)",
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    cursor: eliminando ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Cancelar
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={eliminando}
+                onClick={() => {
+                  if (errorEnDialogo) {
+                    setClaseAEliminar(null);
+                    setErrorEnDialogo(null);
+                    setToast(null);
+                  } else {
+                    confirmarEliminacion();
+                  }
+                }}
+                style={{
+                  padding: "12px 16px",
+                  background: errorEnDialogo 
+                    ? "#0f766e"
+                    : eliminando ? "#fca5a5" : "#dc2626",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  cursor: eliminando ? "not-allowed" : "pointer",
+                }}
+              >
+                {errorEnDialogo 
+                  ? "Cerrar"
+                  : eliminando ? "Eliminando..." : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {claseASuspender && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirmar-suspender-clase"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            zIndex: 1001,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 460,
+              background: "white",
+              borderRadius: 8,
+              padding: "28px",
+              boxShadow: "0 24px 70px rgba(15, 23, 42, 0.25)",
+            }}
+          >
+            <h3
+              id="confirmar-suspender-clase"
+              style={{
+                margin: "0 0 12px",
+                color: "var(--color-dark)",
+                fontSize: "1.25rem",
+                fontWeight: 800,
+              }}
+            >
+              Suspender clase
+            </h3>
+            <p style={{ margin: "0 0 16px", color: "var(--color-dark)", fontWeight: 600 }}>
+              ¿Está seguro que quiere suspender esta clase? Se suspenderá la clase sólo para el día seleccionado.
+            </p>
+            <div style={{ background: "#fff7ed", padding: "16px", borderRadius: "8px", marginBottom: "16px", border: "1px solid #ffedd5", fontSize: "0.95rem" }}>
+              <p style={{ margin: "0 0 8px" }}><strong>Clase:</strong> {claseASuspender.disciplina.nombre} ({claseASuspender.titulo})</p>
+              <p style={{ margin: "0 0 8px" }}><strong>Profesor:</strong> {claseASuspender.profesor.nombre} {claseASuspender.profesor.apellido}</p>
+              <p style={{ margin: "0 0 8px" }}><strong>Fecha:</strong> {formatearFecha(claseASuspender.fechaHora)}</p>
+              <p style={{ margin: 0 }}><strong>Horario:</strong> {formatearHorario(claseASuspender.fechaHora, claseASuspender.duracionMin)}</p>
+            </div>
+            <p style={{ margin: 0, color: "var(--color-gray)", fontSize: "0.875rem", lineHeight: 1.5 }}>
+              Se notificará al profesor y a los alumnos inscritos (los alumnos abonados recibirán un crédito gratis de clase, los no abonados recibirán su reintegro en efectivo).
+            </p>
+
+            {errorSuspender && (
+              <p
+                style={{
+                  margin: "16px 0 0",
+                  color: "#b91c1c",
+                  background: "#fee2e2",
+                  border: "1px solid #fecaca",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  fontWeight: 600,
+                }}
+              >
+                {errorSuspender}
+              </p>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
+              <button
+                type="button"
+                disabled={suspendiendo}
+                onClick={() => {
+                  setClaseASuspender(null);
+                  setErrorSuspender(null);
+                }}
+                style={{
+                  padding: "12px 16px",
+                  background: "#f8fafc",
+                  color: "var(--color-dark)",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  cursor: suspendiendo ? "not-allowed" : "pointer",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={suspendiendo}
+                onClick={confirmarSuspension}
+                style={{
+                  padding: "12px 16px",
+                  background: suspendiendo ? "#fed7aa" : "#ea580c",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  cursor: suspendiendo ? "not-allowed" : "pointer",
+                }}
+              >
+                {suspendiendo ? "Suspendiendo..." : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {toast && (
+        <Toast
+          tipo={toast.tipo}
+          mensaje={toast.mensaje}
+          duracion={8000}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {claseInscriptos && (
+        <ModalInscriptosClase
+          claseId={claseInscriptos.id}
+          claseTitulo={claseInscriptos.titulo}
+          claseTerminada={(() => {
+            const fin = new Date(new Date(claseInscriptos.fechaHora).getTime() + claseInscriptos.duracionMin * 60000);
+            return new Date() >= fin;
+          })()}
+          onClose={() => setClaseInscriptos(null)}
         />
       )}
     </>

@@ -13,6 +13,14 @@ export type RegistroState = {
     password?: string[];
     fechaNac?: string[];
     aptoFisico?: string[];
+    declaracionAptoFisico?: string[];
+  };
+  valores?: {
+    dni?: string;
+    nombre?: string;
+    apellido?: string;
+    email?: string;
+    fechaNac?: string;
   };
   mensaje?: string;
   exito?: boolean;
@@ -35,15 +43,20 @@ export async function registrarCliente(
   const dni = (formData.get("dni") as string)?.trim();
   const nombre = (formData.get("nombre") as string)?.trim();
   const apellido = (formData.get("apellido") as string)?.trim();
-  const email = (formData.get("email") as string)?.trim();
-  const password = formData.get("password") as string;
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
+  const password = (formData.get("password") as string)?.trim();
   const fechaNacStr = formData.get("fechaNac") as string;
   const archivo = formData.get("aptoFisico") as File | null;
+  const declaracionAptoFisico = formData.get("declaracionAptoFisico");
 
   const errores: RegistroState["errores"] = {};
 
   // Validaciones básicas
-  if (!dni) errores.dni = ["El DNI es requerido."];
+  if (!dni) {
+    errores.dni = ["El DNI es requerido."];
+  } else if (!/^[1-9][0-9]{6,7}$/.test(dni)) {
+    errores.dni = ["Se debe ingresar un DNI con formato válido"];
+  }
   if (!nombre) errores.nombre = ["El nombre es requerido."];
   if (!apellido) errores.apellido = ["El apellido es requerido."];
   if (!email) errores.email = ["El email es requerido."];
@@ -65,30 +78,47 @@ export async function registrarCliente(
   // Validar archivo apto físico
   if (!archivo || archivo.size === 0) {
     errores.aptoFisico = ["Debe adjuntar el certificado de aptitud física."];
+  } else {
+    const mimetypesPermitidos = ["application/pdf", "image/jpeg", "image/png"];
+    const extensionesPermitidas = [".pdf", ".jpg", ".jpeg", ".png"];
+    const ext = path.extname(archivo.name).toLowerCase();
+
+    if (!mimetypesPermitidos.includes(archivo.type)) {
+      errores.aptoFisico = ["Formato de archivo no válido. Solo se permiten PDF, JPG o PNG."];
+    } else if (!extensionesPermitidas.includes(ext)) {
+      errores.aptoFisico = ["La extensión del archivo no es válida. Solo se permiten .pdf, .jpg, .jpeg o .png."];
+    }
   }
 
-  if (Object.keys(errores).length > 0) {
-    return { errores };
+  if (!declaracionAptoFisico) {
+    errores.declaracionAptoFisico = ["Es necesario declarar la validez del apto-físico adjunto."];
   }
 
-  const dniNumero = Number(dni);
+  const valores: RegistroState["valores"] = { dni, nombre, apellido, email, fechaNac: fechaNacStr };
 
-  // Verificar unicidad de DNI y email en la BD
-  const [cantidadDni, emailExistente] = await Promise.all([
-    prisma.usuario.count({
-    where: {
-      dni: dniNumero,
-    },
-  }),
-    prisma.usuario.findUnique({ where: { email } }),
-  ]);
-if (cantidadDni > 0) {
-  errores.dni = ["Ya existe un usuario registrado con ese DNI."];
-}
-  if (emailExistente) errores.email = ["Este email ya está registrado."];
+  // Verificar unicidad en la BD solo si no hay errores previos en esos campos
+  const promesasDb = [];
+
+  if (!errores.dni) {
+    promesasDb.push(
+      prisma.usuario.count({ where: { dni: Number(dni) } }).then((count) => {
+        if (count > 0) errores.dni = ["Ya existe un usuario registrado con ese DNI."];
+      })
+    );
+  }
+
+  if (!errores.email) {
+    promesasDb.push(
+      prisma.usuario.findUnique({ where: { email } }).then((usuario) => {
+        if (usuario) errores.email = ["Este email ya está registrado."];
+      })
+    );
+  }
+
+  await Promise.all(promesasDb);
 
   if (Object.keys(errores).length > 0) {
-    return { errores };
+    return { errores, valores };
   }
 
   // Guardar archivo en public/uploads
@@ -105,7 +135,7 @@ if (cantidadDni > 0) {
   const fechaNac = new Date(fechaNacStr);
   await prisma.usuario.create({
     data: {
-      dni: dniNumero,
+      dni: Number(dni),
       nombre,
       apellido,
       email,

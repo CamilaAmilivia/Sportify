@@ -1,11 +1,12 @@
 // Al inicio de CalendarioSemanal.tsx, antes del primer import de react
 'use client'
 
-
+import { useRouter } from 'next/navigation'
 import { useState, useMemo } from 'react'
 import { format, startOfWeek, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { Actividad, DiaSemana } from './types'
+import type { PronosticoDia } from '@/lib/clima'
 import Link from 'next/link'  // ← este import va arriba del archivo, no acá
 
 // ─── Datos de ejemplo ────────────────────────────────────────────────────────
@@ -136,46 +137,50 @@ interface TarjetaActividadProps {
   onClick: (a: Actividad) => void
 }
 
-function TarjetaActividad({ actividad, onClick }: TarjetaActividadProps) {
+function TarjetaActividad({ actividad }: { actividad: Actividad }) {
   const c = colorDe(actividad.color)
-  const lleno = actividad.inscriptos >= actividad.capacidadMaxima
-  const pct = porcentajeLleno(actividad.inscriptos, actividad.capacidadMaxima)
+  const lleno =
+    actividad.disponiblesReales !== undefined
+      ? actividad.disponiblesReales <= 0
+      : actividad.inscriptos >= actividad.capacidadMaxima
+  const inscriptosAMostrar = lleno ? actividad.capacidadMaxima : actividad.inscriptos
+  const pct = lleno ? 100 : porcentajeLleno(actividad.inscriptos, actividad.capacidadMaxima)
 
   return (
-    <button
-      onClick={() => onClick(actividad)}
+    <Link
+      href={`/plataforma/cronograma?claseId=${actividad.id}`}
       className={`
-        w-full text-left rounded-lg border-l-4 p-3 mb-2 transition-all duration-150
-        hover:shadow-md hover:-translate-y-0.5 active:scale-95
+        block w-full text-left rounded-xl border-l-4 p-3.5 mb-2.5 shadow-sm transition-all duration-150
+        hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]
         ${c.bg} ${c.borde}
         ${lleno ? 'opacity-70' : ''}
       `}
     >
-      <div className="flex items-start justify-between gap-1 mb-1">
+      <div className="flex items-start justify-between gap-1 mb-1.5">
         <span className={`font-semibold text-sm leading-tight ${c.texto}`}>
           {actividad.nombre}
         </span>
         {lleno && (
-          <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 whitespace-nowrap shrink-0">
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700 whitespace-nowrap shrink-0">
             Lleno
           </span>
         )}
       </div>
 
-      <p className="text-xs text-slate-500 mb-1">
-        {actividad.horaInicio} – {actividad.horaFin}
+      <p className="text-xs text-slate-500 mb-1.5 flex items-center gap-1">
+        <span aria-hidden>🕐</span> {actividad.horaInicio} – {actividad.horaFin}
       </p>
 
-      <p className="text-xs text-slate-600 truncate">👤 {actividad.instructor}</p>
+      <p className="text-xs text-slate-600 truncate mb-0.5">👤 {actividad.instructor}</p>
 
       {actividad.salon && (
         <p className="text-xs text-slate-500 truncate">📍 {actividad.salon}</p>
       )}
 
       {/* Barra de capacidad */}
-      <div className="mt-2">
-        <div className="flex justify-between text-xs text-slate-400 mb-0.5">
-          <span>{actividad.inscriptos}/{actividad.capacidadMaxima} inscriptos</span>
+      <div className="mt-2.5">
+        <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+          <span>{inscriptosAMostrar}/{actividad.capacidadMaxima} inscriptos</span>
           <span>{pct}%</span>
         </div>
         <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
@@ -185,7 +190,7 @@ function TarjetaActividad({ actividad, onClick }: TarjetaActividadProps) {
           />
         </div>
       </div>
-    </button>
+    </Link>
   )
 }
 
@@ -197,8 +202,12 @@ interface ModalActividadProps {
 
 function ModalActividad({ actividad, onCerrar }: ModalActividadProps) {
   const c = colorDe(actividad.color)
-  const lleno = actividad.inscriptos >= actividad.capacidadMaxima
-  const pct = porcentajeLleno(actividad.inscriptos, actividad.capacidadMaxima)
+  const lleno =
+    actividad.disponiblesReales !== undefined
+      ? actividad.disponiblesReales <= 0
+      : actividad.inscriptos >= actividad.capacidadMaxima
+  const inscriptosAMostrar = lleno ? actividad.capacidadMaxima : actividad.inscriptos
+  const pct = lleno ? 100 : porcentajeLleno(actividad.inscriptos, actividad.capacidadMaxima)
 
   return (
     // Fondo oscuro — posición normal-flow para no colapsar el iframe
@@ -246,7 +255,7 @@ function ModalActividad({ actividad, onCerrar }: ModalActividadProps) {
           <div className="rounded-lg bg-slate-50 p-3">
             <div className="flex justify-between text-xs text-slate-400 mb-1">
               <span>Capacidad</span>
-              <span>{actividad.inscriptos}/{actividad.capacidadMaxima} ({pct}%)</span>
+              <span>{inscriptosAMostrar}/{actividad.capacidadMaxima} ({pct}%)</span>
             </div>
             <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
               <div
@@ -284,10 +293,15 @@ interface CalendarioSemanalProps {
    * En producción, pasá las actividades desde tu Server Component usando Prisma.
    */
   actividades?: Actividad[]
+  /**
+   * Pronóstico del clima por día, indexado por fecha "yyyy-MM-dd".
+   */
+  clima?: Record<string, PronosticoDia>
 }
 
-export default function CalendarioSemanal({ actividades = ACTIVIDADES_EJEMPLO }: CalendarioSemanalProps) {
+export default function CalendarioSemanal({ actividades = [], clima = {} }: CalendarioSemanalProps) {
   const [semanaBase, setSemanaBase] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const router = useRouter()
   const [actividadSeleccionada, setActividadSeleccionada] = useState<Actividad | null>(null)
   const [filtroDia, setFiltroDia] = useState<DiaSemana | 'Todos'>('Todos')
   const [filtroNombre, setFiltroNombre] = useState('')
@@ -310,120 +324,169 @@ export default function CalendarioSemanal({ actividades = ACTIVIDADES_EJEMPLO }:
   const actividadesPorDia = (dia: DiaSemana) =>
     actividadesFiltradas.filter((a) => a.dia === dia)
 
-  const irSemanaAnterior = () => setSemanaBase((d) => addDays(d, -7))
-  const irSemanaSiguiente = () => setSemanaBase((d) => addDays(d, 7))
-  const irHoy = () => setSemanaBase(startOfWeek(new Date(), { weekStartsOn: 1 }))
+const irSemanaAnterior = () => {
+  const nueva = addDays(semanaBase, -7)
+  setSemanaBase(nueva)
+  router.push(`/plataforma/cronograma?semana=${format(nueva, 'yyyy-MM-dd')}`)
+}
 
-  const hoy = format(new Date(), 'EEEE', { locale: es })
+const irSemanaSiguiente = () => {
+  const nueva = addDays(semanaBase, 7)
+  setSemanaBase(nueva)
+  router.push(`/plataforma/cronograma?semana=${format(nueva, 'yyyy-MM-dd')}`)
+}
+
+const irHoy = () => {
+  const nueva = startOfWeek(new Date(), { weekStartsOn: 1 })
+  setSemanaBase(nueva)
+  router.push(`/plataforma/cronograma`)
+}
+
+  const hoy = format(new Date(), 'yyyy-MM-dd')
 
   return (
     <div className="min-h-screen bg-slate-50">
       {/* ── Encabezado ── */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-slate-800">Calendario de actividades</h1>
-            <p className="text-sm text-slate-500 capitalize">
+      <header className="max-w-7xl mx-auto px-5 pt-6">
+        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl px-5 py-6 flex flex-col items-center gap-5">
+          {/* Título */}
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Calendario de actividades</h1>
+            <p className="text-sm text-slate-500 capitalize mt-1">
               {format(semanaBase, "d 'de' MMMM", { locale: es })} –{' '}
               {format(addDays(semanaBase, 6), "d 'de' MMMM yyyy", { locale: es })}
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Filtro por nombre */}
-            <input
-              type="search"
-              placeholder="Buscar actividad…"
-              value={filtroNombre}
-              onChange={(e) => setFiltroNombre(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 w-44 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
+          {/* Buscador + navegación de semana */}
+          <div className="flex items-center gap-2.5 flex-wrap justify-center">
+            <div className="relative">
+              <input
+                type="search"
+                placeholder="Buscar actividad…"
+                value={filtroNombre}
+                onChange={(e) => setFiltroNombre(e.target.value)}
+                className="appearance-none border border-slate-200 rounded-full pl-4 pr-10 py-2 text-sm text-slate-700 w-52 focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-sm"
+              />
+              <svg
+                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <circle cx="11" cy="11" r="7" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </div>
 
-            {/* Navegación de semana */}
-            <button
-              onClick={irSemanaAnterior}
-              className="p-2 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600"
-              aria-label="Semana anterior"
-            >
-              ←
-            </button>
-            <button
-              onClick={irHoy}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 text-sm"
-            >
-              Hoy
-            </button>
-            <button
-              onClick={irSemanaSiguiente}
-              className="p-2 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600"
-              aria-label="Semana siguiente"
-            >
-              →
-            </button>
+            <div className="flex items-center gap-1.5 bg-slate-50 rounded-full p-1 border border-slate-200">
+              <button
+                onClick={irSemanaAnterior}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white hover:shadow-sm text-slate-600 transition-all"
+                aria-label="Semana anterior"
+              >
+                ←
+              </button>
+              <button
+                onClick={irHoy}
+                className="px-3.5 py-1.5 rounded-full hover:bg-white hover:shadow-sm text-slate-600 text-sm font-medium transition-all"
+              >
+                Hoy
+              </button>
+              <button
+                onClick={irSemanaSiguiente}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white hover:shadow-sm text-slate-600 transition-all"
+                aria-label="Semana siguiente"
+              >
+                →
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Filtro por día (pills) */}
-        <div className="max-w-7xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
-          {(['Todos', ...DIAS] as const).map((d) => (
-            <button
-              key={d}
-              onClick={() => setFiltroDia(d)}
-              className={`
-                px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors
-                ${filtroDia === d
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}
-              `}
-            >
-              {d}
-            </button>
-          ))}
+          {/* Filtro por día (pills) */}
+          <div className="flex gap-5 flex-wrap justify-center border-t border-slate-100 pt-6 w-full max-w-5xl mx-auto">
+            {(['Todos', ...DIAS] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => setFiltroDia(d)}
+                className={`
+                  px-7 py-3.5 rounded-full text-base font-semibold whitespace-nowrap transition-all duration-150
+                  ${filtroDia === d
+                    ? 'bg-blue-600 text-white shadow-md scale-105'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'}
+                `}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
       {/* ── Grilla de días ── */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
+      <main className="max-w-7xl mx-auto px-5 pt-10 pb-7">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-5">
           {diasConFecha.map(({ dia, fecha }) => {
-            const esHoy = format(fecha, 'EEEE', { locale: es }).toLowerCase() === hoy.toLowerCase()
+            const esHoy = format(fecha, 'yyyy-MM-dd') === hoy
             const items = actividadesPorDia(dia)
 
             // Si hay filtro de día activo y no es este día, ocultar
             if (filtroDia !== 'Todos' && filtroDia !== dia) return null
 
             return (
-              <div key={dia} className="flex flex-col">
+              <div
+                key={dia}
+                className={`
+                  flex flex-col rounded-2xl border-2 overflow-hidden shadow-sm transition-shadow
+                  ${esHoy ? 'border-blue-300 ring-1 ring-blue-100' : 'border-slate-300 hover:shadow-md'}
+                `}
+              >
                 {/* Cabecera del día */}
                 <div
                   className={`
-                    rounded-t-xl px-3 py-2 mb-0 border border-b-0
+                    px-4 py-4 text-center
                     ${esHoy
-                      ? 'bg-blue-600 border-blue-600 text-white'
-                      : 'bg-white border-slate-200 text-slate-700'}
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-slate-700 border-b border-slate-100'}
                   `}
                 >
-                  <p className="font-semibold text-sm">{dia}</p>
-                  <p className={`text-xs ${esHoy ? 'text-blue-100' : 'text-slate-400'}`}>
+                  <p className="font-bold text-sm tracking-wide uppercase flex items-center justify-center gap-1.5">
+                    {dia}
+                    {clima[format(fecha, 'yyyy-MM-dd')]?.icono && (
+                      <span aria-hidden>{clima[format(fecha, 'yyyy-MM-dd')].icono}</span>
+                    )}
+                  </p>
+                  <p className={`text-xs mt-1 font-medium ${esHoy ? 'text-blue-100' : 'text-slate-400'}`}>
                     {format(fecha, "d MMM", { locale: es })}
+                    {clima[format(fecha, 'yyyy-MM-dd')] && (
+                      <> · {clima[format(fecha, 'yyyy-MM-dd')].temperaturaMax}°</>
+                    )}
                   </p>
                 </div>
 
                 {/* Columna de actividades */}
                 <div
                   className={`
-                    flex-1 rounded-b-xl border p-2 min-h-48
-                    ${esHoy ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200 bg-white'}
+                    flex-1 p-3 min-h-52
+                    ${esHoy ? 'bg-blue-50/30' : 'bg-gradient-to-b from-green-50/70 to-white'}
                   `}
                 >
                   {items.length === 0 ? (
-                    <p className="text-xs text-slate-300 text-center mt-6">Sin actividades</p>
+                    <div className="flex flex-col items-center justify-center h-full text-center py-8 gap-1.5">
+                      <span className="text-2xl opacity-40" aria-hidden>🗓️</span>
+                      <p className="text-xs text-slate-300">Sin actividades</p>
+                    </div>
                   ) : (
                     items.map((act) => (
                       <TarjetaActividad
-                        key={act.id}
-                        actividad={act}
-                        onClick={setActividadSeleccionada}
+                      key={act.id}
+                      actividad={act}
                       />
                     ))
                   )}
@@ -434,10 +497,10 @@ export default function CalendarioSemanal({ actividades = ACTIVIDADES_EJEMPLO }:
         </div>
 
         {/* Leyenda */}
-        <div className="mt-6 flex flex-wrap gap-4 text-xs text-slate-500">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span> Disponible</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Casi lleno (+75%)</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"></span> Completo</span>
+        <div className="mt-7 flex flex-wrap gap-5 text-xs text-slate-500 bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm">
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span> Disponible</span>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Casi lleno (+75%)</span>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"></span> Completo</span>
         </div>
       </main>
 

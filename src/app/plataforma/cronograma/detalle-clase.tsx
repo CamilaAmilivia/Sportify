@@ -1,11 +1,18 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { requerirUsuarioActual } from "@/lib/sesion";
+import { BotonListaEspera } from "./BotonListaEspera";
+import { BotonUsarCredito } from "./BotonUsarCredito";
+import { obtenerCuposDisponiblesPublico } from "@/lib/listaEspera";
+import { obtenerCreditosDisponibles } from "@/lib/creditos";
 
 type DetalleClaseProps = {
   claseId: number;
 };
 
 export async function DetalleClase({ claseId }: DetalleClaseProps) {
+  const usuario = await requerirUsuarioActual();
+
   const clase = await prisma.clase.findUnique({
     where: {
       id: claseId,
@@ -16,6 +23,11 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
       inscripciones: {
         where: {
           estado: "ACTIVA",
+        },
+      },
+      listaEspera: {
+        where: {
+          usuarioId: usuario.id,
         },
       },
     },
@@ -43,8 +55,31 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
   }
 
   const ocupados = clase.inscripciones.length;
-  const disponibles = clase.cupoMaximo - ocupados;
-  const sinCupo = disponibles <= 0;
+
+  const reservasPendientes = await prisma.pago.count({
+    where: { claseId: clase.id, estado: "PENDIENTE", reservaHasta: { gt: new Date() }, NOT: { usuarioId: usuario.id } },
+  });
+
+  const librestotal = clase.cupoMaximo - ocupados - reservasPendientes;
+
+  const disponibles = await obtenerCuposDisponiblesPublico(clase.id);
+
+  const miEntradaListaEspera = clase.listaEspera[0] ?? null;
+  const ventanaNotificacion = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const elegibleAhora =
+    !!miEntradaListaEspera &&
+    !!miEntradaListaEspera.notificadoEn &&
+    miEntradaListaEspera.notificadoEn > ventanaNotificacion &&
+    miEntradaListaEspera.posicion <= librestotal &&
+    librestotal > 0;
+
+  const sinCupo = elegibleAhora ? false : disponibles <= 0;
+  const yaEnListaEspera = !!miEntradaListaEspera && !elegibleAhora;
+
+  const creditosDisponibles =
+    usuario.rol === "CLIENTE" ? await obtenerCreditosDisponibles(usuario.id) : 0;
+
+  const clasePaso = clase.fechaHora < new Date();
 
   return (
     <>
@@ -137,6 +172,11 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
             <br />
             {clase.profesor.nombre} {clase.profesor.apellido}
           </p>
+
+          <p>
+            <strong>Precio clase individual</strong>
+            <br />${clase.precio.toLocaleString("es-AR")}
+          </p>
         </div>
 
         <div style={{ marginTop: 32 }}>
@@ -165,26 +205,70 @@ export async function DetalleClase({ claseId }: DetalleClaseProps) {
         >
           {sinCupo
             ? "No hay cupos disponibles"
-            : `✓ Hay ${disponibles} cupos disponibles`}
+            : elegibleAhora
+              ? "✓ Tenés un cupo reservado por tu lugar en la lista de espera"
+              : `✓ Hay ${disponibles} cupos disponibles`}
         </div>
 
-        <Link
-          href={`/plataforma/cronograma?claseId=${clase.id}&vista=resumen`}
-          style={{
-            display: "block",
-            textAlign: "center",
-            marginTop: 24,
-            borderRadius: 10,
-            padding: "14px 16px",
-            background: sinCupo ? "#9ca3af" : "#22c55e",
-            color: "white",
-            fontWeight: 700,
-            textDecoration: "none",
-            pointerEvents: sinCupo ? "none" : "auto",
-          }}
-        >
-          Inscribirme
-        </Link>
+        {clasePaso && (
+          <div
+            style={{
+              marginTop: 24,
+              textAlign: "center",
+              borderRadius: 10,
+              padding: "14px 16px",
+              background: "#f3f4f6",
+              color: "#6b7280",
+              fontWeight: 600,
+            }}
+          >
+            Esta clase ya finalizó.
+          </div>
+        )}
+
+        {!clasePaso && usuario.rol === "CLIENTE" && (
+          <Link
+            href={`/plataforma/cronograma?claseId=${clase.id}&vista=resumen&tipoPago=CLASE_INDIVIDUAL${elegibleAhora ? "&origen=listaEspera" : ""}`}
+            style={{
+              display: "block",
+              textAlign: "center",
+              marginTop: 24,
+              borderRadius: 10,
+              padding: "14px 16px",
+              background: sinCupo ? "#9ca3af" : "#22c55e",
+              color: "white",
+              fontWeight: 700,
+              textDecoration: "none",
+              pointerEvents: sinCupo ? "none" : "auto",
+            }}
+          >
+            Inscribirme
+          </Link>
+        )}
+
+        {!clasePaso && usuario.rol === "CLIENTE" && !sinCupo && creditosDisponibles > 0 && (
+          <BotonUsarCredito claseId={clase.id} creditosDisponibles={creditosDisponibles} />
+        )}
+
+        {!clasePaso && usuario.rol === "CLIENTE" && sinCupo && !yaEnListaEspera && (
+          <BotonListaEspera claseId={clase.id} />
+        )}
+
+        {!clasePaso && usuario.rol === "CLIENTE" && sinCupo && yaEnListaEspera && (
+          <div
+            style={{
+              marginTop: 24,
+              textAlign: "center",
+              borderRadius: 10,
+              padding: "14px 16px",
+              background: "#fef9c3",
+              color: "#854d0e",
+              fontWeight: 700,
+            }}
+          >
+            ✓ Ya estás en la lista de espera (posición {clase.listaEspera[0].posicion})
+          </div>
+        )}
       </section>
     </>
   );

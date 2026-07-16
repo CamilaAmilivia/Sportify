@@ -15,6 +15,7 @@ enum Rol {
 
 enum EstadoClase {
   ACTIVA
+  SUSPENDIDA
   CANCELADA
   FINALIZADA
 }
@@ -36,6 +37,20 @@ enum TipoPago {
   CLASE_INDIVIDUAL
 }
 
+enum TipoListaEspera {
+  ABONADO
+  CLASE_INDIVIDUAL
+}
+
+enum TipoPenalizacion {
+  AVISO_CANCELACION_TARDIA_ABONO
+  AVISO_CANCELACION_TARDIA_INDIVIDUAL
+  RECARGO_CLASE_INDIVIDUAL
+  RECARGO_ABONO
+  RECARGO_AUSENCIA_INDIVIDUAL
+  AVISO_AUSENCIA_ABONO
+}
+
 model Usuario {
   id         Int       @id @default(autoincrement())
   dni        Int       @unique
@@ -55,6 +70,10 @@ model Usuario {
   listaEspera    ListaEspera[]
   asistencias    Asistencia[]
   pagos          Pago[]
+  penalizaciones Penalizacion[]
+  creditosClase  CreditoClase[]
+  passwordResetTokens PasswordResetToken[]
+  notificaciones Notificacion[]
 }
 
 model Disciplina {
@@ -73,9 +92,11 @@ model Clase {
   descripcion String?
   fechaHora   DateTime
   duracionMin Int
-  cupoMaximo  Int
+  cupoMaximo  Int        @default(1)
   precio      Float      @default(0)
   estado      EstadoClase @default(ACTIVA)
+  qrActivo    Boolean    @default(false)
+  serieId     String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -89,6 +110,9 @@ model Clase {
   listaEspera   ListaEspera[]
   asistencias   Asistencia[]
   pagos         Pago[]
+  penalizaciones Penalizacion[]
+  creditosOrigen CreditoClase[] @relation("CreditoOrigen")
+  creditosUsados CreditoClase[] @relation("CreditoUsado")
 }
 
 model Inscripcion {
@@ -109,9 +133,12 @@ model Inscripcion {
 }
 
 model ListaEspera {
-  id        Int      @id @default(autoincrement())
-  posicion  Int
-  createdAt DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  posicion     Int
+  tipo         TipoListaEspera @default(CLASE_INDIVIDUAL)
+  prioridad    Int      @default(0)
+  createdAt    DateTime @default(now())
+  notificadoEn DateTime?
 
   usuarioId Int
   usuario   Usuario @relation(fields: [usuarioId], references: [id])
@@ -119,7 +146,13 @@ model ListaEspera {
   claseId Int
   clase   Clase @relation(fields: [claseId], references: [id])
 
+  pagoId Int?
+  pago   Pago? @relation(fields: [pagoId], references: [id])
+
   @@unique([usuarioId, claseId])
+  @@index([claseId])
+  @@index([tipo])
+  @@index([prioridad])
 }
 
 model Asistencia {
@@ -156,11 +189,80 @@ model Pago {
   claseId Int?
   clase   Clase? @relation(fields: [claseId], references: [id])
 
+  penalizacionId Int?
+  penalizacion   Penalizacion? @relation(fields: [penalizacionId], references: [id])
+
   inscripciones Inscripcion[]
+  listaEspera   ListaEspera[]
 
   @@index([usuarioId])
   @@index([claseId])
   @@index([estado])
 }
 
+model CreditoClase {
+  id        Int       @id @default(autoincrement())
+  motivo    String
+  usado     Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  usadoEn   DateTime?
 
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  claseOrigenId Int?
+  claseOrigen   Clase? @relation("CreditoOrigen", fields: [claseOrigenId], references: [id])
+
+  claseUsadaId Int?
+  claseUsada   Clase? @relation("CreditoUsado", fields: [claseUsadaId], references: [id])
+
+  @@index([usuarioId])
+  @@index([usado])
+}
+
+model Penalizacion {
+  id          Int              @id @default(autoincrement())
+  tipo        TipoPenalizacion
+  porcentaje  Float            @default(0)
+  motivo      String
+  aplicada    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  claseId Int?
+  clase   Clase? @relation(fields: [claseId], references: [id])
+
+  pagos Pago[]
+
+  @@index([usuarioId])
+  @@index([tipo])
+  @@index([aplicada])
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([token])
+  @@index([usuarioId])
+}
+
+model Notificacion {
+  id        Int      @id @default(autoincrement())
+  mensaje   String
+  leida     Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  usuarioId Int
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@index([leida])
+}

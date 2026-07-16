@@ -38,12 +38,14 @@ export default async function ClaseAsistenciaPage({
       <>
         <TituloPagina titulo="Error" descripcion="Acceso denegado" />
         <p>No tenés permiso para tomar asistencia en esta clase.</p>
-        <Link href="/plataforma/asistencia" style={{ color: "#22c55e", fontWeight: "bold" }}>
-          Volver a Asistencia
+        <Link href="/plataforma/mis-clases" style={{ color: "#22c55e", fontWeight: "bold" }}>
+          Volver a Mis clases
         </Link>
       </>
     );
   }
+
+  const claseTerminada = new Date() >= new Date(clase.fechaHora.getTime() + clase.duracionMin * 60000);
 
   return (
     <>
@@ -53,7 +55,7 @@ export default async function ClaseAsistenciaPage({
       />
 
       <Link
-        href="/plataforma/asistencia"
+        href="/plataforma/mis-clases"
         style={{
           display: "inline-block",
           marginBottom: 24,
@@ -65,7 +67,7 @@ export default async function ClaseAsistenciaPage({
         ← Volver a mis clases
       </Link>
 
-      <GeneradorQR claseId={clase.id} />
+      <GeneradorQR claseId={clase.id} claseTerminada={claseTerminada} />
     </>
   );
 }

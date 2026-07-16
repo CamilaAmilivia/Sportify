@@ -21,10 +21,30 @@ npm install
 
 **2. Crear el archivo de entorno**
 
-Crear un archivo `.env` y definir la ruta de la base de datos:
-
-```env
+# Base de datos
 DATABASE_URL="file:./dev.db"
+
+# Clave secreta para JWT
+JWT_SECRET="super-secret-key-for-sportify-app"
+
+# Dominio de ngrok 
+NGROK_HOST="<tu-subdominio>.ngrok-free.app"
+
+# URL pública de la aplicación (necesaria para los webhooks de MercadoPago)
+APP_URL="https://<tu-subdominio>.ngrok-free.app"
+
+# Credenciales de MercadoPago
+MERCADO_PAGO_ACCESS_TOKEN="APP_USR-..."
+
+# Configuración SMTP para envío de correos
+SMTP_HOST="servidor-smtp.com"
+SMTP_PORT="587"
+SMTP_USER="usuario-smtp"
+SMTP_PASS="contraseña-smtp"
+SMTP_FROM="no-reply@sportify.com"
+
+# URL base para los enlaces en correos enviados
+NEXT_PUBLIC_BASE_URL="http://localhost:3000"
 ```
 
 **2.1 Instalar Prisma**
@@ -59,77 +79,16 @@ Se despliega en [http://localhost:3000](http://localhost:3000).
 npx prisma studio
 ```
 
-**Cargar los seeds de la base de datos:**
+## Datos de prueba
+
+### Sprint 1
 
 ```bash
 npx prisma db seed
 ```
 
-**Prueba de asistencia con QR:**
-
-Crear una clase de prueba para el profesor por defecto (profesor@sportify.com):
+### Sprint 2
 
 ```bash
-npm run test:qr
-```
-
-Este comando:
-1. Limpia cualquier clase de prueba anterior.
-2. Crea una "Clase de Prueba QR" programada exactamente para el minuto actual.
-3. Inscribe automáticamente a todos los usuarios con rol `CLIENTE` en esta clase.
-
-## Gestión de roles
-
-Los siguientes son ejemplos de cómo requerir que un usuario tenga cierto rol para ver componentes o páginas.
-
-### Para administrador
-
-```tsx
-import { requerirRol } from "@/lib/sesion";
-
-export default async function PaginaUsuarios() {
-  const usuario = await requerirRol(["ADMIN"]);
-
-  return (
-    <main>
-      <h1>Gestión de Usuarios</h1>
-      <p>Usuario logueado: {usuario.email}</p>
-    </main>
-  );
-}
-```
-*Nota: Si entra un cliente que no tiene permisos, lo redirecciona a `/plataforma`.*
-
-### Para cliente
-
-```tsx
-import { requerirRol } from "@/lib/sesion";
-
-export default async function PaginaMisClases() {
-  const usuario = await requerirRol(["CLIENTE"]);
-
-  return (
-    <main>
-      <h1>Mis Clases</h1>
-      <p>Cliente: {usuario.nombre}</p>
-    </main>
-  );
-}
-```
-
-### Para múltiples roles (ej. admin y profesor)
-
-```tsx
-import { requerirRol } from "@/lib/sesion";
-
-export default async function PaginaAsistencia() {
-  const usuario = await requerirRol(["ADMIN", "PROFESOR"]);
-
-  return (
-    <main>
-      <h1>Asistencia</h1>
-      <p>Rol actual: {usuario.rol}</p>
-    </main>
-  );
-}
+npm run seed:sprint2
 ```

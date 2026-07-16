@@ -18,8 +18,8 @@ export async function iniciarSesion(
   _prevState: LoginState,
   formData: FormData
 ): Promise<LoginState> {
-  const email = (formData.get("email") as string)?.trim();
-  const password = formData.get("password") as string;
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
+  const password = (formData.get("password") as string)?.trim();
 
   const errores: LoginState["errores"] = {};
 
@@ -45,7 +45,7 @@ export async function iniciarSesion(
     if (!cliente) {
       return {
         errores: {
-          general: ["Credenciales incorrectas. Verificá tu email y contraseña."],
+          general: ["Credenciales incorrectas."],
         },
       };
     }
@@ -54,7 +54,7 @@ export async function iniciarSesion(
     if (cliente.password !== password) {
       return {
         errores: {
-          general: ["Credenciales incorrectas. Verificá tu email y contraseña."],
+          general: ["Credenciales incorrectas."],
         },
       };
     }
@@ -68,11 +68,7 @@ export async function iniciarSesion(
       maxAge: 60 * 60 * 24 * 7, // 7 días
     });
 
-    if (cliente.rol === "ADMIN") {
-      redirectUrl = "/plataforma";
-    } else {
-      redirectUrl = "/plataforma/cronograma";
-    }
+    redirectUrl = "/plataforma/cronograma";
   } catch (error) {
     console.error("Error al iniciar sesión:", error);
     return {

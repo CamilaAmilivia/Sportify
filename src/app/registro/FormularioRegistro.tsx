@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useEffect } from "react";
 import Link from "next/link";
 import { registrarCliente, RegistroState } from "./actions";
 
@@ -12,6 +12,13 @@ export default function FormularioRegistro() {
     estadoInicial
   );
   const [nombreArchivo, setNombreArchivo] = useState<string | null>(null);
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+
+  useEffect(() => {
+    if (state.errores) {
+      setNombreArchivo(null);
+    }
+  }, [state]);
 
   if (state.exito) {
     return (
@@ -58,7 +65,32 @@ export default function FormularioRegistro() {
           type="text"
           placeholder="Ej: 12345678"
           className="form-input"
+          defaultValue={state.valores?.dni ?? ""}
           required
+          maxLength={8}
+          onKeyDown={(e) => {
+            if (
+              e.ctrlKey ||
+              e.metaKey ||
+              e.key.length > 1
+            ) {
+              return;
+            }
+            if (!/^[0-9]$/.test(e.key)) {
+              e.preventDefault();
+              return;
+            }
+            const target = e.target as HTMLInputElement;
+            if (e.key === "0" && target.value.length === 0) {
+              e.preventDefault();
+            }
+          }}
+          onChange={(e) => {
+            let val = e.target.value.replace(/[^0-9]/g, "");
+            if (val.startsWith("0")) val = val.replace(/^0+/, "");
+            if (val.length > 8) val = val.slice(0, 8);
+            e.target.value = val;
+          }}
         />
         {state.errores?.dni && (
           <span className="form-error">⚠ {state.errores.dni[0]}</span>
@@ -77,6 +109,7 @@ export default function FormularioRegistro() {
             type="text"
             placeholder="Juan"
             className="form-input"
+            defaultValue={state.valores?.nombre ?? ""}
             required
           />
           {state.errores?.nombre && (
@@ -94,6 +127,7 @@ export default function FormularioRegistro() {
             type="text"
             placeholder="Pérez"
             className="form-input"
+            defaultValue={state.valores?.apellido ?? ""}
             required
           />
           {state.errores?.apellido && (
@@ -113,6 +147,7 @@ export default function FormularioRegistro() {
           type="email"
           placeholder="juan@mail.com"
           className="form-input"
+          defaultValue={state.valores?.email ?? ""}
           required
         />
         {state.errores?.email && (
@@ -120,19 +155,57 @@ export default function FormularioRegistro() {
         )}
       </div>
 
-      {/* Contraseña */}
+      {/* Contraseña — se vacía intencionalmente por seguridad */}
       <div className="form-field">
         <label htmlFor="password" className="form-label">
           Contraseña
         </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          placeholder="Mínimo 6 caracteres"
-          className="form-input"
-          required
-        />
+        <div style={{ position: "relative" }}>
+          <input
+            id="password"
+            name="password"
+            type={mostrarPassword ? "text" : "password"}
+            placeholder="Mínimo 6 caracteres"
+            className="form-input"
+            style={{ paddingRight: "2.8rem" }}
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setMostrarPassword((v) => !v)}
+            aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            style={{
+              position: "absolute",
+              right: "0.75rem",
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              lineHeight: 1,
+              fontSize: "1.1rem",
+              color: "var(--color-gray)",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            {mostrarPassword ? (
+              // Ojo abierto
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            ) : (
+              // Ojo tachado
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            )}
+          </button>
+        </div>
         {state.errores?.password && (
           <span className="form-error">⚠ {state.errores.password[0]}</span>
         )}
@@ -149,6 +222,7 @@ export default function FormularioRegistro() {
           type="date"
           lang="es-AR"
           className="form-input"
+          defaultValue={state.valores?.fechaNac ?? ""}
           required
         />
         {state.errores?.fechaNac && (
@@ -224,6 +298,24 @@ export default function FormularioRegistro() {
         {state.errores?.aptoFisico && (
           <span className="form-error">⚠ {state.errores.aptoFisico[0]}</span>
         )}
+      </div>
+
+      {/* Declaración Apto Físico */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginTop: 4 }}>
+        <input
+          type="checkbox"
+          id="declaracionAptoFisico"
+          name="declaracionAptoFisico"
+          style={{ width: "18px", height: "18px", marginTop: "2px", cursor: "pointer" }}
+        />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+          <label htmlFor="declaracionAptoFisico" style={{ fontSize: "0.95rem", color: "var(--color-dark)", cursor: "pointer", lineHeight: 1.4, margin: 0 }}>
+            Declaro haber adjuntado un certificado de aptitud física de mi persona válido al día de la fecha.
+          </label>
+          {state.errores?.declaracionAptoFisico && (
+            <span className="form-error">⚠ {state.errores.declaracionAptoFisico[0]}</span>
+          )}
+        </div>
       </div>
 
       {/* Submit */}

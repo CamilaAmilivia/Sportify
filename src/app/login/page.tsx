@@ -13,7 +13,7 @@ export const metadata = {
 export default async function PaginaLogin() {
   const cookieStore = await cookies();
   if (cookieStore.has("sportify_session")) {
-    redirect("/plataforma");
+    redirect("/plataforma/cronograma");
   }
 
   return (
@@ -65,26 +65,45 @@ export default async function PaginaLogin() {
             <FormularioLogin />
 
             {/* Footer del card */}
-            <p
-              style={{
-                textAlign: "center",
-                fontSize: "0.85rem",
-                color: "var(--color-gray)",
-                marginTop: 24,
-              }}
-            >
-              ¿No tenés cuenta?{" "}
-              <Link
-                href="/registro"
+            <div style={{ textAlign: "center", marginTop: 24 }}>
+              <p
                 style={{
-                  color: "var(--color-green)",
-                  fontWeight: 600,
-                  textDecoration: "none",
+                  fontSize: "0.85rem",
+                  color: "var(--color-gray)",
+                  marginBottom: 8,
                 }}
               >
-                Registrate acá
-              </Link>
-            </p>
+                ¿Olvidaste tu contraseña?{" "}
+                <Link
+                  href="/recuperar"
+                  style={{
+                    color: "var(--color-green)",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
+                  Recuperar cuenta
+                </Link>
+              </p>
+              <p
+                style={{
+                  fontSize: "0.85rem",
+                  color: "var(--color-gray)",
+                }}
+              >
+                ¿No tenés cuenta?{" "}
+                <Link
+                  href="/registro"
+                  style={{
+                    color: "var(--color-green)",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
+                  Registrate acá
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </main>
