@@ -49,18 +49,7 @@ export default async function EscanearPage({
     }
 
     if (!clase.qrActivo) {
-      return (
-        <>
-          <TituloPagina titulo="Asistencia cerrada" descripcion="El profesor cerró la toma de asistencia" />
-          <div style={{ color: "#dc2626", background: "#fef2f2", padding: 16, borderRadius: 8, border: "1px solid #fecaca" }}>
-            El profesor ha cerrado la toma de asistencia para esta clase (probablemente cerró la pantalla). Pedile que la vuelva a abrir si todavía estás a tiempo.
-          </div>
-          <br />
-          <Link href="/plataforma" style={{ color: "#22c55e", fontWeight: "bold" }}>
-            Volver al inicio
-          </Link>
-        </>
-      );
+      throw new Error("QR no activo");
     }
 
     // Validar Inscripcion
@@ -157,7 +146,7 @@ export default async function EscanearPage({
     const esExpirado = error.code === "ERR_JWT_EXPIRED";
     const mensaje = esExpirado
       ? "El código QR ha expirado."
-      : "El código QR es inválido o no se pudo procesar.";
+      : "El código QR escaneado no se reconoce como parte de una asistencia vigente para esta clase";
 
     return (
       <>

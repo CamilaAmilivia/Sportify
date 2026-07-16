@@ -63,7 +63,7 @@ export function ScannerModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const validarEscaneo = (textoOriginal: string) => {
+  const validarEscaneo = async (textoOriginal: string) => {
     try {
       // El QR de Sportify debe ser de la forma: .../plataforma/escanear?token=XYZ
       const url = new URL(textoOriginal);
@@ -96,6 +96,18 @@ export function ScannerModal({
       if (payload.claseId !== claseId) {
         setError("El código QR escaneado no se reconoce como parte de una asistencia vigente para esta clase");
         return;
+      }
+
+      // Verificar que el QR siga activo (el profesor no cerró la pantalla)
+      try {
+        const res = await fetch(`/api/asistencia/qr-activo?claseId=${claseId}`);
+        const data = await res.json();
+        if (!data.qrActivo) {
+          setError("El código QR escaneado no se reconoce como parte de una asistencia vigente para esta clase");
+          return;
+        }
+      } catch {
+        // Si falla la consulta, dejamos pasar y que el server-side valide
       }
 
       // Si es exitoso, pausamos la cámara y redirigimos de forma relativa
