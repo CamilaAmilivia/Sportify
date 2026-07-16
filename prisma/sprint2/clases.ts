@@ -32,7 +32,8 @@ export async function createClasesSprint2(
     minutos,
     cupoMaximo,
     disciplinaId,
-    profesorId
+    profesorId,
+    clientesAInscribir = []
   }: {
     titulo: string;
     fechaInicio: string; // Formato YYYY-MM-DD
@@ -41,13 +42,14 @@ export async function createClasesSprint2(
     cupoMaximo: number;
     disciplinaId: number;
     profesorId: number;
+    clientesAInscribir?: number[];
   }) {
     let currentDate = new Date(`${fechaInicio}T00:00:00`);
     currentDate.setHours(hora, minutos, 0, 0);
 
     let count = 0;
     while (currentDate <= finDeAnio) {
-      await prisma.clase.create({
+      const claseCreada = await prisma.clase.create({
         data: {
           titulo: titulo,
           fechaHora: new Date(currentDate),
@@ -59,10 +61,24 @@ export async function createClasesSprint2(
           profesorId: profesorId,
         }
       });
+      
+      // Inscribir a los clientes solicitados
+      for (const clienteId of clientesAInscribir) {
+        if (clienteId) {
+          await prisma.inscripcion.create({
+            data: {
+              usuarioId: clienteId,
+              claseId: claseCreada.id,
+              estado: "ACTIVA"
+            }
+          });
+        }
+      }
+
       count++;
       currentDate.setDate(currentDate.getDate() + 7); // Sumar 7 días
     }
-    console.log(`✅ Creadas ${count} clases de "${titulo}" desde ${fechaInicio} hasta fin de año.`);
+    console.log(`✅ Creadas ${count} clases de "${titulo}" desde ${fechaInicio} hasta fin de año${clientesAInscribir.length > 0 ? ` con ${clientesAInscribir.length} inscriptos cada una` : ''}.`);
   }
 
   // --- Clases originales del pedido anterior ---
@@ -131,6 +147,31 @@ export async function createClasesSprint2(
     cupoMaximo: 10,
     disciplinaId: discFuncional.id,
     profesorId: prof2.id
+  });
+
+  // --- Clases nuevas (Llenas) ---
+  // 7. "Martes relax" los martes a las 10hs, cupo 2, profesor2, inicia 21/07/2026
+  await crearSerie({
+    titulo: "Martes relax",
+    fechaInicio: "2026-07-21",
+    hora: 10,
+    minutos: 0,
+    cupoMaximo: 2,
+    disciplinaId: discYoga.id, // Asumiendo Yoga para "relax"
+    profesorId: prof2.id,
+    clientesAInscribir: [clientesIds[1], clientesIds[2]] // cliente2 y cliente3
+  });
+
+  // 8. "Pilates personal" martes a las 12hs, cupo 2, profesor3, inicia 21/07/2026
+  await crearSerie({
+    titulo: "Pilates personal",
+    fechaInicio: "2026-07-21",
+    hora: 12,
+    minutos: 0,
+    cupoMaximo: 2,
+    disciplinaId: discPilates.id,
+    profesorId: prof3.id,
+    clientesAInscribir: [clientesIds[1], clientesIds[2]] // cliente2 y cliente3
   });
 
   console.log("✅ Todas las clases del Sprint 2 fueron creadas.");
