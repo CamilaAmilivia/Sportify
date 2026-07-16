@@ -76,8 +76,10 @@ export async function createClasesQR(
 
   const clases = [claseTarde, claseAhora, claseTemprano, claseAhoraProf2];
 
-  // Inscribir a los clientes en las tres clases
-  for (const clase of clases) {
+  const clasesProfe1 = [claseTarde, claseAhora, claseTemprano];
+
+  // Inscribir a los clientes en las tres clases del Profesor 1
+  for (const clase of clasesProfe1) {
     for (const clienteId of clientesIds) {
       await prisma.inscripcion.create({
         data: {
@@ -87,6 +89,22 @@ export async function createClasesQR(
         }
       });
     }
+  }
+
+  // Inscribir solo a Cliente 2 en la clase de Profesor 2
+  const cliente2 = await prisma.usuario.findUnique({
+    where: { email: "cliente2@joaquin.caraballo.com.ar" }
+  });
+  const cliente2Id = cliente2?.id ?? clientesIds[1];
+
+  if (cliente2Id) {
+    await prisma.inscripcion.create({
+      data: {
+        usuarioId: cliente2Id,
+        claseId: claseAhoraProf2.id,
+        estado: "ACTIVA"
+      }
+    });
   }
 
   console.log(`✅ Creada clase "Clase Tarde QR" (-2 hrs, ID: ${claseTarde.id})`);

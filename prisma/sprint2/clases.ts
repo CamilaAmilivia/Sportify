@@ -8,7 +8,7 @@ export async function createClasesSprint2(
   clientesIds: number[]
 ) {
   console.log("📅 Iniciando creación de clases para el Sprint 2...");
-  
+
   // Encontrar base de profe y disciplina para el QR
   const prof1 = profesores[0];
   const prof2 = profesores[1];
@@ -20,7 +20,7 @@ export async function createClasesSprint2(
 
   // Llamar submódulo QR
   await createClasesQR(prisma, prof1.id, prof2.id, discFuncional.id, clientesIds);
-  
+
   // Lógica de clases repetitivas integrada
   console.log("📅 Creando clases repetitivas hasta fin de año...");
   const finDeAnio = new Date("2026-12-31T23:59:59");
@@ -61,7 +61,7 @@ export async function createClasesSprint2(
           profesorId: profesorId,
         }
       });
-      
+
       // Inscribir a los clientes solicitados
       for (const clienteId of clientesAInscribir) {
         if (clienteId) {
