@@ -1,0 +1,42 @@
+{
+  "clientes": [
+    {
+      "dni": 10000001,
+      "nombre": "Cliente",
+      "apellido": "Uno",
+      "email": "cliente1@algo.com"
+    },
+    {
+      "dni": 10000002,
+      "nombre": "Cliente",
+      "apellido": "Dos",
+      "email": "cliente2@algo.com"
+    },
+    {
+      "dni": 10000003,
+      "nombre": "Cliente",
+      "apellido": "Tres",
+      "email": "cliente3@algo.com"
+    }
+  ],
+  "profesores": [
+    {
+      "dni": 20000001,
+      "nombre": "Profesor",
+      "apellido": "Uno",
+      "email": "profesor1@algo.com"
+    },
+    {
+      "dni": 20000002,
+      "nombre": "Profesor",
+      "apellido": "Dos",
+      "email": "profesor2@algo.com"
+    },
+    {
+      "dni": 20000003,
+      "nombre": "Profesor",
+      "apellido": "Tres",
+      "email": "profesor3@algo.com"
+    }
+  ]
+}

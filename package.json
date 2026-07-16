@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:qr": "tsx prisma/test-qr.ts"
+    "seed:sprint2": "tsx prisma/sprint2.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.8.0",

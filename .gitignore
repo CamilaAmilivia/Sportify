@@ -47,3 +47,7 @@ next-env.d.ts
 
 # Cargas
 /public/uploads/*
+
+# Datos de la demo (NO SUBIR AL REPO)
+demo-data.json
+prisma/sprint2/demo-cuentas.json

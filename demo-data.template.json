@@ -1,0 +1,14 @@
+[
+  {
+    "dni": 12345678,
+    "nombre": "NombreDemo",
+    "apellido": "ApellidoDemo",
+    "email": "correo.real@ejemplo.com"
+  },
+  {
+    "dni": 87654321,
+    "nombre": "OtroDemo",
+    "apellido": "ApellidoOtro",
+    "email": "otro.correo.real@ejemplo.com"
+  }
+]
