@@ -57,11 +57,11 @@ export async function restablecerContrasena(
     });
 
     if (!validToken) {
-      return { mensaje: "El enlace es inválido o ha expirado. Por favor solicita uno nuevo." };
+      return { mensaje: "El enlace es inválido. Por favor solicita uno nuevo." };
     }
 
     if (validToken.expiresAt < new Date()) {
-      return { mensaje: "El enlace es inválido o ha expirado. Por favor solicita uno nuevo." };
+      return { mensaje: "El enlace es inválido. Por favor solicita uno nuevo." };
     }
 
     // Actualizar la contraseña del usuario (actualmente en texto plano según el resto de la app)

@@ -36,8 +36,8 @@ export async function sendPasswordResetEmail(to: string, token: string) {
     from: smtpFrom,
     to,
     subject: "Recuperación de contraseña — Sportify",
-    text: `Para restablecer tu contraseña, ingresá al siguiente enlace: ${resetUrl}\n\nSi no solicitaste este cambio, podés ignorar este correo. El enlace expirará en 1 hora.`,
-    html: `<p>Para restablecer tu contraseña, ingresá al siguiente enlace: <a href="${resetUrl}">${resetUrl}</a></p><p>Si no solicitaste este cambio, podés ignorar este correo. El enlace expirará en 1 hora.</p>`,
+    text: `Para restablecer tu contraseña, ingresá al siguiente enlace: ${resetUrl}\n\nSi no solicitaste este cambio, podés ignorar este correo.`,
+    html: `<p>Para restablecer tu contraseña, ingresá al siguiente enlace: <a href="${resetUrl}">${resetUrl}</a></p><p>Si no solicitaste este cambio, podés ignorar este correo.</p>`,
   };
 
   await transporter.sendMail(mailOptions);
